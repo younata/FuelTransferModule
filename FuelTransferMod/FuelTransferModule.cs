@@ -147,6 +147,14 @@ public class FuelTransferCore
     bool m_list_vessels = false;
     bool m_select_source_tank = false;
     bool m_select_dest_tank = false;
+    bool m_transfer_fuel = false;
+
+    string m_transfer_amount_str = "0";
+    int m_transfer_amount = 0;
+
+    Part m_selected_source_tank = null;
+    Vessel m_selected_target = null;
+    Part m_selected_dest_tank = null;
     #endregion
 
     public FuelTransferCore(Part part)
@@ -196,6 +204,53 @@ public class FuelTransferCore
         GUI.color = savedColor;
         GUILayout.EndHorizontal();
         #endregion
+        #region Tank Selections
+        if (m_system_online)
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Source Tank: ");
+
+            if (m_selected_source_tank != null)
+            {
+                GUI.color = Color.green;
+                GUILayout.Label(m_selected_source_tank.name + " - " + ((FuelTank)m_selected_source_tank).fuel.ToString() + "L");
+            }
+            else
+            {
+                GUILayout.Label("None Selected");
+            }
+            GUILayout.EndHorizontal();
+            GUI.color = savedColor;
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Target Vessel: ");
+
+            if (m_selected_target != null)
+            {
+                GUI.color = Color.green;
+                GUILayout.Label(m_selected_target.vesselName);
+            }
+            else
+            {
+                GUILayout.Label("None Selected");
+            }
+            GUILayout.EndHorizontal();
+            GUI.color = savedColor;
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Destination Tank: ");
+
+            if (m_selected_dest_tank != null)
+            {
+                GUI.color = Color.green;
+                GUILayout.Label(m_selected_dest_tank.name + " - " + ((FuelTank)m_selected_dest_tank).fuel.ToString() + "L");
+            }
+            else
+            {
+                GUILayout.Label("None Selected");
+            }
+            GUILayout.EndHorizontal();
+            GUI.color = savedColor;
+        }
+        #endregion
         #region Buttons
         GUILayout.BeginHorizontal();
 
@@ -207,6 +262,7 @@ public class FuelTransferCore
             m_select_source_tank = GUILayout.Toggle(m_select_source_tank, "Select Source Tank", new GUIStyle(GUI.skin.button));
             m_list_vessels = GUILayout.Toggle(m_list_vessels, "List Vessels", new GUIStyle(GUI.skin.button));
             m_select_dest_tank = GUILayout.Toggle(m_select_dest_tank, "Select Dest Tank", new GUIStyle(GUI.skin.button));
+            m_transfer_fuel = GUILayout.Toggle(m_transfer_fuel, "Transfer", new GUIStyle(GUI.skin.button));
         }
         GUILayout.EndHorizontal();
         #endregion
@@ -221,18 +277,31 @@ public class FuelTransferCore
             {
                 foreach (RefuelTarget target in m_refuel_targets.targets)
                 {
-                    if ((target.Vessel != null) && is_refuel_target(target.Vessel)) 
+                    double distance = (Math.Round(Math.Sqrt(Math.Pow(Math.Abs(target.Position.x - m_part.vessel.transform.position.x), 2)
+                                                                                 + Math.Pow(Math.Abs(target.Position.y - m_part.vessel.transform.position.y), 2)
+                                                                                 + Math.Pow(Math.Abs(target.Position.z - m_part.vessel.transform.position.z), 2)), 2));
+                    if ((target.Vessel != null) && is_refuel_target(target.Vessel) && distance < 100000) 
                          refuel_targets.Add(target.Vessel);
                 }
             }
 
             savedColor = GUI.color;
-            GUI.color = Color.green;
-            
             //list the targets
             foreach (Vessel v in refuel_targets)
             {
-                GUILayout.Label(String.Format("Target: " + v.vesselName + ": {0:0} km above " + v.mainBody.name, ((v.transform.position - v.mainBody.position).magnitude - v.mainBody.Radius) / 1000.0));
+                double distance = (Math.Round(Math.Sqrt(Math.Pow(Math.Abs(v.transform.position.x - m_part.vessel.transform.position.x), 2)
+                                                                                                 + Math.Pow(Math.Abs(v.transform.position.y - m_part.vessel.transform.position.y), 2)
+                                                                                                 + Math.Pow(Math.Abs(v.transform.position.z - m_part.vessel.transform.position.z), 2)), 2));
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button("Select", new GUIStyle(GUI.skin.button)))
+                {
+                    m_selected_target = v;
+                }
+                GUI.color = Color.green;
+                GUILayout.Label(String.Format("FT: " + v.vesselName + " - " + string.Format("{0:#,###0}", distance) + "km"));
+                GUI.color = savedColor;
+                GUILayout.EndHorizontal();
+                //GUILayout.Label(String.Format("Target: " + v.vesselName + ": {0:0} km above " + v.mainBody.name, ((v.transform.position - v.mainBody.position).magnitude - v.mainBody.Radius) / 1000.0));
             }
             
             GUI.color = savedColor;
@@ -242,7 +311,12 @@ public class FuelTransferCore
             {
                 if (!refuel_targets.Contains(v) && !v.vesselName.ToLower().Contains("debris"))//isComsat(v) && ))
                 {
-                    GUILayout.Label(String.Format(v.vesselName + ": {0:0} km above " + v.mainBody.name, ((v.transform.position - v.mainBody.position).magnitude - v.mainBody.Radius) / 1000.0));
+                    //GUILayout.Label(String.Format(v.vesselName + ": {0:0} km above " + v.mainBody.name, ((v.transform.position - v.mainBody.position).magnitude - v.mainBody.Radius) / 1000.0));
+
+                    double distance = (Math.Round(Math.Sqrt(Math.Pow(Math.Abs(v.transform.position.x - m_part.vessel.transform.position.x), 2)
+                                                                                                     + Math.Pow(Math.Abs(v.transform.position.y - m_part.vessel.transform.position.y), 2)
+                                                                                                     + Math.Pow(Math.Abs(v.transform.position.z - m_part.vessel.transform.position.z), 2)), 2));
+                    GUILayout.Label(String.Format(v.vesselName + " - " + string.Format("{0:#,###0}", distance) + "km"));
                 }
             }
         
@@ -258,14 +332,20 @@ public class FuelTransferCore
             m_source_tanks = new List<Part>();
             foreach (Part p in m_part.vessel.parts)
             {
-                GUILayout.Label("Part: " + p.name);
-                if (RequestFuel(p, 0.1f, p.lastFuelRequestId))
+                //GUILayout.Label("Part: " + p.name);
+                if (p.GetType() == typeof(FuelTank))
                     m_source_tanks.Add(p);
             }
-            GUI.color = Color.green;
+            
             foreach (Part p in m_source_tanks)
             {
-                GUILayout.Label("Tank: " + p.name);
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button("Select", new GUIStyle(GUI.skin.button)))
+                {
+                    m_selected_source_tank = p;
+                }
+                GUILayout.Label("Tank: " + p.name + " - " + Math.Round(((FuelTank)p).fuel, 1).ToString() +"L");
+                GUILayout.EndHorizontal();
             }
 
             GUI.color = savedColor;
@@ -276,10 +356,53 @@ public class FuelTransferCore
         else if (m_select_dest_tank)
         {
             m_vessel_scroll = GUILayout.BeginScrollView(m_vessel_scroll);
+
+            m_dest_tanks = new List<Part>();
+            foreach (Part p in m_part.vessel.parts)
+            {
+                //GUILayout.Label("Part: " + p.name);
+                if (p.GetType() == typeof(FuelTank))
+                    m_dest_tanks.Add(p);
+            }
+
+            foreach (Part p in m_dest_tanks)
+            {
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button("Select", new GUIStyle(GUI.skin.button)))
+                {
+                    m_selected_dest_tank = p;
+                }
+                GUILayout.Label("Tank: " + p.name + " - " + Math.Round(((FuelTank)p).fuel, 1).ToString() + "L");
+                GUILayout.EndHorizontal();
+            }
+
+            GUI.color = savedColor;
+
+
             GUILayout.EndScrollView();
         }
         #endregion
+        #region Transfer Window
+        else if (m_transfer_fuel)
+        {
+            m_transfer_amount_str =GUILayout.TextField(m_transfer_amount_str, new GUIStyle(GUI.skin.textField));
+            try
+            {
+                m_transfer_amount = Convert.ToInt32(m_transfer_amount_str);
+            }
+            catch
+            {
+                m_transfer_amount = 0;
+            }
+            if (GUILayout.Button("Transfer Now", new GUIStyle(GUI.skin.button)))
+            {
+                ((FuelTank)m_selected_source_tank).fuel -= m_transfer_amount;
+                ((FuelTank)m_selected_dest_tank).fuel += m_transfer_amount;
+            }
+            
 
+        }
+        #endregion
 
 
         GUI.DragWindow();
@@ -293,7 +416,7 @@ public class FuelTransferCore
 
         if (m_parameters.windowed)
         {
-            m_window_pos = GUILayout.Window(WINDOW_ID, m_window_pos, WindowGUI, "Fuel Transfer System", GUILayout.Width(350), GUILayout.Height(((m_select_source_tank || m_list_vessels || m_select_dest_tank) ? 300 : 50)));
+            m_window_pos = GUILayout.Window(WINDOW_ID, m_window_pos, WindowGUI, "Fuel Transfer System", GUILayout.Width(350), GUILayout.Height(((m_select_source_tank || m_list_vessels || m_select_dest_tank) ? 400 : 100)));
         }
         else
         {
