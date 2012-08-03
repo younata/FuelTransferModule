@@ -96,10 +96,6 @@ public class FuelTransferCore
     Rect m_window_pos = new Rect(125, 0, 10, 10);
     FuelTransferParameters m_parameters;
 
-    private LineRenderer line = null;
-
-    PlanetariumCamera planetariumCamera = null;
-    GameObject obj = new GameObject("Line");
     // The Part
     Part m_part;
 
@@ -110,7 +106,6 @@ public class FuelTransferCore
     Vector2 m_source_tanks_scroll = new Vector2();
     public List<Part> m_source_tanks = new List<Part>();
 
-    Vector2 m_dest_tanks_scroll = new Vector2();
     public List<Part> m_dest_tanks = new List<Part>();
 
     int m_ticks_since_target_check = 0;
@@ -120,10 +115,12 @@ public class FuelTransferCore
     bool m_list_vessels = false;
     bool m_select_source_tank = false;
     bool m_select_dest_tank = false;
-    bool m_transfer_fuel = false;
+
+    // making the above 4 bools obsolete
+    int m_selected_action = -1;
 
     string m_transfer_amount_str = "0";
-    int m_transfer_amount = 0;
+    float m_transfer_amount = 0;
 
     Part m_selected_source_tank = null;
     Vessel m_selected_target = null;
@@ -223,16 +220,13 @@ public class FuelTransferCore
         m_system_online = GUILayout.Toggle(m_system_online, "System Power", new GUIStyle(GUI.skin.button));
         if (m_system_online)
         {
-			// TODO: Have the following act as radio buttons.
-            m_select_source_tank = GUILayout.Toggle(m_select_source_tank, "Select Source Tank", new GUIStyle(GUI.skin.button));
-            m_list_vessels = GUILayout.Toggle(m_list_vessels, "List Vessels", new GUIStyle(GUI.skin.button));
-            m_select_dest_tank = GUILayout.Toggle(m_select_dest_tank, "Select Dest Tank", new GUIStyle(GUI.skin.button));
-            m_transfer_fuel = GUILayout.Toggle(m_transfer_fuel, "Transfer", new GUIStyle(GUI.skin.button));
+            String[] options = {"Select Source Tank", "List Vessels", "Select Dest Tank", "Transfer"};
+            m_selected_action = GUILayout.SelectionGrid(m_selected_action, options, 4, GUI.skin.button);
         }
         GUILayout.EndHorizontal();
         #endregion
         #region List Vessels Scroll Window
-        if (m_list_vessels && m_system_online)
+        if (m_selected_action == 0 && m_system_online)
         {
             m_vessel_scroll = GUILayout.BeginScrollView(m_vessel_scroll);
 
@@ -289,7 +283,7 @@ public class FuelTransferCore
         }
         #endregion
         #region Select Source Tank
-        else if (m_select_source_tank && m_system_online)
+        else if (m_selected_action == 1 && m_system_online)
         {
             m_source_tanks_scroll = GUILayout.BeginScrollView(m_source_tanks_scroll);
 
@@ -316,14 +310,13 @@ public class FuelTransferCore
         }
         #endregion
         #region Select Dest Tank
-        else if (m_select_dest_tank && m_system_online)
+        else if (m_selected_action == 2 && m_system_online)
         {
             m_vessel_scroll = GUILayout.BeginScrollView(m_vessel_scroll);
 
             m_dest_tanks = new List<Part>();
             foreach (Part p in m_part.vessel.parts)
             {
-                //GUILayout.Label("Part: " + p.name);
                 if (p.GetType() == typeof(FuelTank))
                     m_dest_tanks.Add(p);
             }
@@ -346,12 +339,12 @@ public class FuelTransferCore
         }
         #endregion
         #region Transfer Window
-        else if (m_transfer_fuel)
+        else if (m_selected_action == 3 && m_system_online)
         {
             m_transfer_amount_str =GUILayout.TextField(m_transfer_amount_str, new GUIStyle(GUI.skin.textField));
             try
             {
-                m_transfer_amount = Convert.ToInt32(m_transfer_amount_str);
+                m_transfer_amount = (float)Convert.ToDouble(m_transfer_amount_str);
 				if (m_transfer_amount > ((FuelTank)m_selected_source_tank).fuel)
 				    m_transfer_amount = ((FuelTank)m_selected_source_tank).fuel;
             }
@@ -380,7 +373,7 @@ public class FuelTransferCore
 
         if (m_parameters.windowed)
         {
-            m_window_pos = GUILayout.Window(WINDOW_ID, m_window_pos, WindowGUI, "Fuel Transfer System", GUILayout.Width(350), GUILayout.Height(((m_select_source_tank || m_list_vessels || m_select_dest_tank) ? 400 : 100)));
+            m_window_pos = GUILayout.Window(WINDOW_ID, m_window_pos, WindowGUI, "Fuel Transfer System", GUILayout.Width(350), GUILayout.Height(((m_selected_action >= 0) ? 400 : 100)));
         }
     }
 
