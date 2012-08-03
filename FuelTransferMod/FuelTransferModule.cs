@@ -223,8 +223,8 @@ public class FuelTransferCore
         m_system_online = GUILayout.Toggle(m_system_online, "System Power", new GUIStyle(GUI.skin.button));
         if (m_system_online)
         {
+			// TODO: Have the following act as radio buttons.
             m_select_source_tank = GUILayout.Toggle(m_select_source_tank, "Select Source Tank", new GUIStyle(GUI.skin.button));
-			// TODO: Have the following three act as radio buttons.
             m_list_vessels = GUILayout.Toggle(m_list_vessels, "List Vessels", new GUIStyle(GUI.skin.button));
             m_select_dest_tank = GUILayout.Toggle(m_select_dest_tank, "Select Dest Tank", new GUIStyle(GUI.skin.button));
             m_transfer_fuel = GUILayout.Toggle(m_transfer_fuel, "Transfer", new GUIStyle(GUI.skin.button));
@@ -296,7 +296,7 @@ public class FuelTransferCore
             m_source_tanks = new List<Part>();
             foreach (Part p in m_part.vessel.parts)
             {
-                if (p.GetType() == typeof(FuelTank))
+                if (p.GetType() == typeof(FuelTank) && ((FuelTank)p).fuel > 0.0)
                     m_source_tanks.Add(p);
             }
             
@@ -352,6 +352,8 @@ public class FuelTransferCore
             try
             {
                 m_transfer_amount = Convert.ToInt32(m_transfer_amount_str);
+				if (m_transfer_amount > ((FuelTank)m_selected_source_tank).fuel)
+				    m_transfer_amount = ((FuelTank)m_selected_source_tank).fuel;
             }
             catch
             {
