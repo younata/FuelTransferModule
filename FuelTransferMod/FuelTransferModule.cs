@@ -7,8 +7,6 @@ using UnityEngine;
 
 public struct FuelTransferParameters
 {
-    public double speedOfLight; //default speed of light 30,000 km/s; (one tenth real speed)
-    public String comsatString;
     public String basePlanet;
     public double baseLatitude;
     public double baseLongitude;
@@ -20,8 +18,6 @@ public struct FuelTransferParameters
 public class FuelTransferPod : CommandPod
 {
     //see cfg file for explanation of m_parameters
-    public double speedOfLight = 30000000.0; //default speed of light 30,000 km/s; (one tenth real speed)
-    public String comsatString = "comsat";
     public String basePlanet = "Kerbin";
     public double baseLatitude = -0.103;
     public double baseLongitude = -74.570;
@@ -38,29 +34,8 @@ public class FuelTransferPod : CommandPod
         core = new FuelTransferCore(this);
     }
 
-    //make the vessel crewless
     protected override void onPartAwake()
     {
-        //make the vessel crewless
-        /*
-        GameObject go = GameObject.Find("internalSpace");
-        if (go != null)
-        {
-            Transform t = go.transform;
-            if (t != null)
-            {
-                Transform child = t.FindChild("mk1pod_internal");
-                if (child != null)
-                {
-                    InternalModel im = child.GetComponent<InternalModel>();
-                    if (im != null)
-                    {
-                        im.seats = new InternalSeat
-                    }
-                }
-            }
-        }
-        */
         base.onPartAwake();
     }
 
@@ -73,8 +48,6 @@ public class FuelTransferPod : CommandPod
 
     protected override void onFlightStart()
     {
-        parameters.speedOfLight = speedOfLight; //default speed of light 30,000 km/s; (one tenth real speed)
-        parameters.comsatString = comsatString;
         parameters.basePlanet = basePlanet;
         parameters.baseLatitude = baseLatitude;
         parameters.baseLongitude = baseLongitude;
@@ -167,21 +140,14 @@ public class FuelTransferCore
         this.m_parameters = parameters;
     }
 
-    //decide whether a vessel is a comsat
-    bool is_refuel_target(Vessel v)
-    {
-        /*
-        foreach (ProtoPartSnapshot pps in v.protoVessel.protoPartSnapshots)
-        {
-            if (pps.partStateValues.ContainsKey("SatState"))
-            {
-                if (pps.partStateValues["SatState"].value_int == 3) return true;
-            }
-        }
-        */
-
-        //return (v.vesselName.ToLower().Contains(parameters.comsatString) && (v.isCommandable || !v.vesselName.ToLower().Contains("debris")));
-        return (v.isCommandable && !v.vesselName.ToLower().Contains("debris"));
+    //decide whether a vessel has fueltanks!
+    bool is_refuel_target (Vessel v)
+	{
+		foreach (Part p in v.parts) {
+			if (p.GetType() == typeof(FuelTank))
+				return true;
+		}
+		return false;
     }
 
     void WindowGUI(int windowID)
@@ -255,11 +221,10 @@ public class FuelTransferCore
         GUILayout.BeginHorizontal();
 
         m_system_online = GUILayout.Toggle(m_system_online, "System Power", new GUIStyle(GUI.skin.button));
-        //if (!newLocalControl && localControl) delayedBuffer = new FlightCtrlStateBuffer();
-        //localControl = newLocalControl;
         if (m_system_online)
         {
             m_select_source_tank = GUILayout.Toggle(m_select_source_tank, "Select Source Tank", new GUIStyle(GUI.skin.button));
+			// TODO: Have the following three act as radio buttons.
             m_list_vessels = GUILayout.Toggle(m_list_vessels, "List Vessels", new GUIStyle(GUI.skin.button));
             m_select_dest_tank = GUILayout.Toggle(m_select_dest_tank, "Select Dest Tank", new GUIStyle(GUI.skin.button));
             m_transfer_fuel = GUILayout.Toggle(m_transfer_fuel, "Transfer", new GUIStyle(GUI.skin.button));
@@ -267,11 +232,10 @@ public class FuelTransferCore
         GUILayout.EndHorizontal();
         #endregion
         #region List Vessels Scroll Window
-        if (m_list_vessels)
+        if (m_list_vessels && m_system_online)
         {
             m_vessel_scroll = GUILayout.BeginScrollView(m_vessel_scroll);
 
-            //compile a list of comsat vessels that are in the current relay path
             List<Vessel> refuel_targets = new List<Vessel>();
             if (m_refuel_targets != null)
             {
@@ -309,7 +273,7 @@ public class FuelTransferCore
             //list the non targets
             foreach (Vessel v in FlightGlobals.Vessels)
             {
-                if (!refuel_targets.Contains(v) && !v.vesselName.ToLower().Contains("debris"))//isComsat(v) && ))
+                if (!refuel_targets.Contains(v) && !v.vesselName.ToLower().Contains("debris"))
                 {
                     //GUILayout.Label(String.Format(v.vesselName + ": {0:0} km above " + v.mainBody.name, ((v.transform.position - v.mainBody.position).magnitude - v.mainBody.Radius) / 1000.0));
 
@@ -325,14 +289,13 @@ public class FuelTransferCore
         }
         #endregion
         #region Select Source Tank
-        else if (m_select_source_tank)
+        else if (m_select_source_tank && m_system_online)
         {
             m_source_tanks_scroll = GUILayout.BeginScrollView(m_source_tanks_scroll);
 
             m_source_tanks = new List<Part>();
             foreach (Part p in m_part.vessel.parts)
             {
-                //GUILayout.Label("Part: " + p.name);
                 if (p.GetType() == typeof(FuelTank))
                     m_source_tanks.Add(p);
             }
@@ -353,7 +316,7 @@ public class FuelTransferCore
         }
         #endregion
         #region Select Dest Tank
-        else if (m_select_dest_tank)
+        else if (m_select_dest_tank && m_system_online)
         {
             m_vessel_scroll = GUILayout.BeginScrollView(m_vessel_scroll);
 
@@ -410,7 +373,6 @@ public class FuelTransferCore
 
     void drawGUI()
     {
-        //if (FlightGlobals.ActiveVessel != m_part.vessel || !weAreMainCore()) return;
 
         GUI.skin = HighLogic.Skin;
 
@@ -418,56 +380,16 @@ public class FuelTransferCore
         {
             m_window_pos = GUILayout.Window(WINDOW_ID, m_window_pos, WindowGUI, "Fuel Transfer System", GUILayout.Width(350), GUILayout.Height(((m_select_source_tank || m_list_vessels || m_select_dest_tank) ? 400 : 100)));
         }
-        else
-        {
-            Color savedColor = GUI.color;
-            /*if (m_radio_contact && controlPath != null)
-            {
-                GUI.color = Color.yellow;
-                GUI.Label(new Rect(m_parameters.displayX, m_parameters.displayY, 400, 300), "Relay path: " + controlPath.ToString() + "\n"
-                    + String.Format("Path length: {0:0} km, round trip delay: {1:0.00} s", controlPath.Length / 1000.0, controlDelay));
-            }
-            else
-            {*/
-                GUI.color = Color.red;
-                GUI.Label(new Rect(m_parameters.displayX, m_parameters.displayY, 300, 40), "Out of radio contact!");
-            //}
-            GUI.color = savedColor;
-        }
     }
 
     public void drive(FlightCtrlState s)
     {
-        //if (FlightGlobals.ActiveVessel != m_part.vessel || !weAreMainCore()) return;
-        /*
-        if (!localControl)
-        {
-            if (!m_radio_contact)
-            {
-                //lock out the player if we are out of radio contact
-                FlightInputHandler.SetNeutralControls();
-            }
-            else
-            {
-                //usually the game feeds back whatever value of killrot we gave it last frame. If this is not true, then the 
-                //user toggled SAS.
-                if (s.killRot != lastKillRot)
-                {
-                    myKillRot = !myKillRot;
-                }
-                s.killRot = myKillRot;
-                delayedBuffer.push(s, Planetarium.GetUniversalTime());
-                delayedBuffer.pop(s, Planetarium.GetUniversalTime() - controlDelay);
-                lastKillRot = s.killRot;
-            }
-        }
-         */
-
     }
 
     public void onPartFixedUpdate()
     {
-        if (FlightGlobals.ActiveVessel != m_part.vessel) return;// || !weAreMainCore()) return;
+        if (FlightGlobals.ActiveVessel != m_part.vessel)
+            return;
 
         
         if (m_ticks_since_target_check++ > 100)
@@ -480,54 +402,12 @@ public class FuelTransferCore
             foreach (Vessel v in FlightGlobals.Vessels)
                 if (is_refuel_target(v))
                     targets.Add(v);
-
-            //m_refuel_targets =;
-            if (m_refuel_targets == null)
-            {
-                //print("ARRemoteCore: no radio contact!!");
-            }
-            else
-            {
-                //controlDelay = 2 * controlPath.Length / m_parameters.speedOfLight;
-                //print("ARRemoteCore: radio contact: " + controlPath.ToString());
-                //print("ARRemoteCore: signal path length (km) = " + controlPath.Length / 1000.0 + "; round trip time (s) = " + controlDelay);
-            }
         }
-         
-        /*
-        if (m_radio_contact && showPathInMapView && MapView.MapIsEnabled)
-        {
-            line.enabled = true;
-            if (controlPath != null)
-            {
-                line.SetVertexCount(controlPath.targets.Count);
-                for (int i = 0; i < controlPath.targets.Count; i++)
-                {
-                    if (controlPath.targets[i].IsBase)
-                    {
-                        line.SetPosition(i, computeBaseRelayPosition() * Planetarium.InverseScaleFactor);
-                    }
-                    else
-                    {
-                        line.SetPosition(i, controlPath.targets[i].Position * Planetarium.InverseScaleFactor);
-                    }
-                }
-
-                line.SetWidth((float)(0.01 * planetariumCamera.Distance), (float)(0.01 * planetariumCamera.Distance));
-            }
-        }
-        else
-        {
-            line.enabled = false;
-        }
-         */
     }
 
     public void onFlightStart()
     {
         print("--------ARRemoteCore m_parameters--------");
-        print("ARRemoteCore: speedOfLight = " + m_parameters.speedOfLight);
-        print("ARRemoteCore: comsatString = " + m_parameters.comsatString);
         print("ARRemoteCore: basePlanet = " + m_parameters.basePlanet);
         print("ARRemoteCore: baseLatitude = " + m_parameters.baseLatitude);
         print("ARRemoteCore: baseLongitude = " + m_parameters.baseLongitude);
@@ -541,21 +421,6 @@ public class FuelTransferCore
         
         RenderingManager.AddToPostDrawQueue(3, new Callback(drawGUI));
 
-        /*
-        planetariumCamera = (PlanetariumCamera)GameObject.FindObjectOfType(typeof(PlanetariumCamera));
-
-        obj.layer = 9;
-
-        // Then create renderer itself...
-        line = obj.AddComponent<LineRenderer>();
-        line.transform.parent = null;
-        line.useWorldSpace = true;
-
-        // Make it render a red to yellow triangle, 1 meter wide and 2 meters long
-        line.material = new Material(Shader.Find("Particles/Additive"));
-        line.SetColors(Color.blue, Color.blue);
-        line.SetWidth(1, 1);
-        */
     }
 
     public void onPartDestroy()
@@ -633,7 +498,6 @@ public class RefuelTarget : IEquatable<RefuelTarget>
 
 public class RefuelTargets
 {
-    //targets through which the signal is relayed
     public List<RefuelTarget> targets = new List<RefuelTarget>();
 
     public RefuelTargets(List<RefuelTarget> nodes)
