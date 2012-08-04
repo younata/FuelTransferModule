@@ -78,67 +78,8 @@ public class FuelTransferPod : CommandPod
     protected override void onPartStart()
     {
     }
-}
-
-public class FuelTransferModule : Part
-{
-    //see cfg file for explanation of m_parameters
-    public String basePlanet = "Kerbin";
-    public double baseLatitude = -0.103;
-    public double baseLongitude = -74.570;
-    public bool windowed = true;
-    public float displayX = 125;
-    public float displayY = 0;
-
-    FuelTransferParameters parameters;
-
-    FuelTransferCore core;
-
-    protected override void onPartAwake()
-    {
-        base.onPartAwake();
-    }
-
-    protected override void onPartFixedUpdate()
-    {
-        core.onPartFixedUpdate();
-        base.onPartFixedUpdate();
-    }
 
 
-    protected override void onFlightStart()
-    {
-        parameters.basePlanet = basePlanet;
-        parameters.baseLatitude = baseLatitude;
-        parameters.baseLongitude = baseLongitude;
-        parameters.windowed = windowed;
-        parameters.displayX = displayX;
-        parameters.displayY = displayY;
-
-        core.applyParameters(parameters);
-        core.onFlightStart();
-        base.onFlightStart();
-    }
-
-    protected override void onPartDestroy()
-    {
-        core.onPartDestroy();
-        base.onPartDestroy();
-    }
-
-    protected override void onDisconnect()
-    {
-        core.onDisconnect();
-        base.onDisconnect();
-    }
-
-    /// <summary>
-    /// Called when the m_part is started by Unity
-    /// </summary>
-    protected override void onPartStart()
-    {
-        core = new FuelTransferCore(this);
-    }
 }
 
 public class FuelTransferCore
@@ -152,11 +93,13 @@ public class FuelTransferCore
     // The Part
     Part m_part;
 
-    Vector2 m_vessel_scroll = new Vector2();
+    Vector2 m_source_vessel_scroll = new Vector2();
+    Vector2 m_dest_vessel_scroll = new Vector2();
     //public RefuelTargets m_refuel_targets;
 
 
     Vector2 m_source_tanks_scroll = new Vector2();
+    Vector2 m_dest_tanks_scroll = new Vector2();
     public List<Part> m_source_tanks = new List<Part>();
 
     public List<Part> m_dest_tanks = new List<Part>();
@@ -169,10 +112,15 @@ public class FuelTransferCore
 
     string m_transfer_amount_str = "0";
     float m_transfer_amount = 0;
+    float m_transfer_amount_percent = 0;
 
-    Part m_selected_source_tank = null;
-    Vessel m_selected_target = null;
-    Part m_selected_dest_tank = null;
+    string m_transfer_rate_str = "0";
+    float m_transfer_rate = 0;
+
+    Vessel m_source_vessel = null;
+    Part m_source_tank = null;
+    Vessel m_dest_vessel = null;
+    Part m_dest_tank = null;
     #endregion
 
     public FuelTransferCore(Part part)
@@ -217,204 +165,306 @@ public class FuelTransferCore
         GUI.color = savedColor;
         GUILayout.EndHorizontal();
         #endregion
-        #region Tank Selections
         if (m_system_online)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Source Tank: ");
+                #region Source Column
+                GUILayout.BeginVertical("box");
+                    GUILayout.Label("Source");
+                    #region Source vessel
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label("Vessel: ");
 
-            if (m_selected_source_tank != null)
-            {
-                GUI.color = Color.green;
-                GUILayout.Label(m_selected_source_tank.name + " - " + ((FuelTank)m_selected_source_tank).fuel.ToString() + "L");
-            }
-            else
-            {
-                GUILayout.Label("None Selected");
-            }
-            GUILayout.EndHorizontal();
-            GUI.color = savedColor;
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Target Vessel: ");
-
-            if (m_selected_target != null)
-            {
-                GUI.color = Color.green;
-                GUILayout.Label(m_selected_target.vesselName);
-            }
-            else
-            {
-                GUILayout.Label("None Selected");
-            }
-            GUILayout.EndHorizontal();
-            GUI.color = savedColor;
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Destination Tank: ");
-
-            if (m_selected_dest_tank != null)
-            {
-                GUI.color = Color.green;
-                GUILayout.Label(m_selected_dest_tank.name + " - " + ((FuelTank)m_selected_dest_tank).fuel.ToString() + "L");
-            }
-            else
-            {
-                GUILayout.Label("None Selected");
-            }
-            GUILayout.EndHorizontal();
-            GUI.color = savedColor;
-        }
-        #endregion
-        #region Buttons
-        GUILayout.BeginHorizontal();
-
-        m_system_online = GUILayout.Toggle(m_system_online, "System Power", new GUIStyle(GUI.skin.button));
-        if (m_system_online)
-        {
-            String[] options = {"List Vessels", "Select Source Tank", "Select Dest Tank", "Transfer"};
-            m_selected_action = GUILayout.SelectionGrid(m_selected_action, options, 4, GUI.skin.button);
-        }
-        GUILayout.EndHorizontal();
-        #endregion
-        #region List Vessels Scroll Window
-        if (m_selected_action == 0 && m_system_online)
-        {
-            m_vessel_scroll = GUILayout.BeginScrollView(m_vessel_scroll);
-
-            // Draw all the vessels in the list vessels scroll view
-            //list the non targets
-            foreach (Vessel v in FlightGlobals.Vessels)
-            {
-                if (!v.vesselName.ToLower().Contains("debris") && v.isCommandable && v != null)
-                {   // We want to make sure that this vessel is not debris and is a legitimate command pod
-
-                    // This calculate the distance from the current vessel (v) to ourselves
-                    //      Rounded to 2 decimal places
-                    double distance = (Math.Round(Math.Sqrt(Math.Pow(Math.Abs(v.transform.position.x - m_part.vessel.transform.position.x), 2)
-                                                         + Math.Pow(Math.Abs(v.transform.position.y - m_part.vessel.transform.position.y), 2)
-                                                         + Math.Pow(Math.Abs(v.transform.position.z - m_part.vessel.transform.position.z), 2)), 2));
-
-                    // If the distance is less than 2,000m we can now scan for fuel tanks
-                    //      TODO: We will want a stage closer than this that will be the ACTUAL refueling range
-                    if (distance < 2000d && is_refuel_target(v))
+                    if (m_source_vessel != null)
                     {
-                        //GUILayout.Label(v.vesselName + " - is_refuel_target: " + is_refuel_target(v));
-                        GUILayout.BeginHorizontal();
-                        // If user clicks the select button make this vessel the active target
-                        if (GUILayout.Button("Select", new GUIStyle(GUI.skin.button)))
-                        {
-                            m_selected_target = v;
-                        }
-
-                        // If this vessel is the Active Vessel, lets change the color and not include the distance
-                        if (FlightGlobals.ActiveVessel == v)
-                        {
-                            GUI.color = Color.magenta;
-                            GUILayout.Label(v.vesselName + " (Self)");
-                        }
-                        else
-                        {   // Standard green output for scannable vessels
-                            GUI.color = Color.green;
-                            GUILayout.Label(String.Format(v.vesselName + " - " + string.Format("{0:#,###0}", distance) + "m"));
-                        }
-                        GUI.color = savedColor;
-                        GUILayout.EndHorizontal();
-                    }
-                    else if (distance <= PROXIMITY_DISTANCE)
-                    {   // This is for a "medium" contact range. Nearby Vessels. Set large for testing
-                        GUI.color = Color.yellow;
-                        GUILayout.Label(String.Format(v.vesselName + " - " + string.Format("{0:#,###0}", distance) + "m"));
-                        GUI.color = savedColor;
+                        GUI.color = (FlightGlobals.ActiveVessel == m_source_vessel) ? Color.magenta : Color.green;
+                        GUILayout.Label(m_source_vessel.vesselName);
                     }
                     else
-                    {   // All other vessels. Greater than PROXIMITY_DISTANCE
-                        GUILayout.Label(String.Format(v.vesselName + " - " + string.Format("{0:#,###0}", distance) + "m"));
+                    {
+                        GUILayout.Label("None Selected");
+                    }
+                    GUILayout.EndHorizontal();
+                    GUI.color = savedColor;
+                    #endregion
+                    #region Source Tank
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label("Tank: ");
+                    if (m_source_tank != null)
+                    {
+                        GUI.color = Color.green;
+                        GUILayout.Label(((FuelTank)m_source_tank).fuel.ToString() + "L");
+                    }
+                    else
+                    {
+                        GUILayout.Label("None Selected");
+                    }
+                    GUILayout.EndHorizontal();
+                    GUI.color = savedColor;
+                    
+                    #endregion
+                    #region Source Vessel List
+                m_source_vessel_scroll = GUILayout.BeginScrollView(m_source_vessel_scroll);
+
+                // Draw all the vessels in the list vessels scroll view
+                foreach (Vessel v in FlightGlobals.Vessels)
+                {
+                    if (!v.vesselName.ToLower().Contains("debris") && v.isCommandable && v != null)
+                    {   // We want to make sure that this vessel is not debris and is a legitimate command pod
+
+                        // This calculate the distance from the current vessel (v) to ourselves
+                        //      Rounded to 2 decimal places
+                        double distance = (Math.Round(Math.Sqrt(Math.Pow(Math.Abs(v.transform.position.x - m_part.vessel.transform.position.x), 2)
+                                                             + Math.Pow(Math.Abs(v.transform.position.y - m_part.vessel.transform.position.y), 2)
+                                                             + Math.Pow(Math.Abs(v.transform.position.z - m_part.vessel.transform.position.z), 2)), 2));
+
+                        // If the distance is less than 2,000m we can now scan for fuel tanks
+                        //      TODO: We will want a stage closer than this that will be the ACTUAL refueling range
+                        if (distance < 2000d && is_refuel_target(v))
+                        {
+                            //GUILayout.Label(v.vesselName + " - is_refuel_target: " + is_refuel_target(v));
+                            GUILayout.BeginHorizontal();
+                            // If user clicks the select button make this vessel the active target
+                            if (GUILayout.Button("+", new GUIStyle(GUI.skin.button)))
+                            {
+                                m_source_vessel = v;
+                                m_source_tank = null;
+                            }
+
+                            // If this vessel is the Active Vessel, lets change the color and not include the distance
+                            if (FlightGlobals.ActiveVessel == v)
+                            {
+                                GUI.color = Color.magenta;
+                                GUILayout.Label(v.vesselName);
+                            }
+                            else
+                            {   // Standard green output for scannable vessels
+                                GUI.color = Color.green;
+                                GUILayout.Label(String.Format(v.vesselName + " - " + string.Format("{0:#,###0}", distance) + "m"));
+                            }
+                            GUI.color = savedColor;
+                            GUILayout.FlexibleSpace();
+                            GUILayout.EndHorizontal();
+                        }
+                        else if (distance <= PROXIMITY_DISTANCE)
+                        {   // This is for a "medium" contact range. Nearby Vessels. Set large for testing
+                            GUI.color = Color.yellow;
+                            GUILayout.Label(String.Format(v.vesselName + " - " + string.Format("{0:#,###0}", distance) + "m"));
+                            GUI.color = savedColor;
+                        }
+                        else
+                        {   // All other vessels. Greater than PROXIMITY_DISTANCE
+                            GUILayout.Label(String.Format(v.vesselName + " - " + string.Format("{0:#,###0}", distance) + "m"));
+                        }
                     }
                 }
-            }
-               
-            GUI.color = savedColor;
 
-            GUILayout.EndScrollView();
-        }
-        #endregion
-        #region Select Source Tank
-        else if (m_selected_action == 1 && m_system_online)
-        {
-            m_source_tanks_scroll = GUILayout.BeginScrollView(m_source_tanks_scroll);
+                GUI.color = savedColor;
 
-            m_source_tanks = new List<Part>();
-            foreach (Part p in m_part.vessel.parts)
-            {
-                if (p.GetType() == typeof(FuelTank) && ((FuelTank)p).fuel > 0.0)
-                    m_source_tanks.Add(p);
-            }
-            
-            foreach (Part p in m_source_tanks)
-            {
+                GUILayout.EndScrollView();
+                #endregion
+                    #region Source Tank List
+                    GUILayout.Label("Source Tank");
+                    m_source_tanks_scroll = GUILayout.BeginScrollView(m_source_tanks_scroll);
+
+                    m_source_tanks = new List<Part>();
+                    if (m_source_vessel != null)
+                    {
+                        foreach (Part p in m_source_vessel.parts)
+                        {
+                            if (p.GetType() == typeof(FuelTank) && ((FuelTank)p).fuel > 0.0)
+                                m_source_tanks.Add(p);
+                        }
+                    }
+                    foreach (Part p in m_source_tanks)
+                    {
+                        GUILayout.BeginHorizontal();
+                        if (GUILayout.Button("+", new GUIStyle(GUI.skin.button)))
+                        {
+                            m_source_tank = p;
+                        }
+                        GUILayout.Label(Math.Round(((FuelTank)p).fuel, 1).ToString() + "L");
+                        GUILayout.FlexibleSpace();
+                        GUILayout.EndHorizontal();
+                    }
+
+                    GUI.color = savedColor;
+                    GUILayout.EndScrollView();
+                    #endregion
+                    GUILayout.FlexibleSpace();
+                GUILayout.EndVertical();
+                #endregion
+                #region Destination Column
+                GUILayout.BeginVertical("box");
+                    GUILayout.Label("Destination");
+                    #region Dest Vessel
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label("Vessel: ");
+
+                    if (m_dest_vessel != null)
+                    {
+                        GUI.color = (FlightGlobals.ActiveVessel == m_dest_vessel) ? Color.magenta : Color.green;
+                        GUILayout.Label(m_dest_vessel.vesselName);
+                    }
+                    else
+                    {
+                        GUILayout.Label("None Selected");
+                    }
+                    GUILayout.EndHorizontal();
+                    GUI.color = savedColor;
+                    #endregion
+                    #region Dest Tank
                 GUILayout.BeginHorizontal();
-                if (GUILayout.Button("Select", new GUIStyle(GUI.skin.button)))
+                GUILayout.Label("Tank: ");
+
+                if (m_dest_tank != null)
                 {
-                    m_selected_source_tank = p;
+                    GUI.color = Color.green;
+                    GUILayout.Label(((FuelTank)m_dest_tank).fuel.ToString() + "L");
                 }
-                GUILayout.Label("Tank: " + p.name + " - " + Math.Round(((FuelTank)p).fuel, 1).ToString() +"L");
-                GUILayout.EndHorizontal();
-            }
-
-            GUI.color = savedColor;
-            GUILayout.EndScrollView();
-        }
-        #endregion
-        #region Select Dest Tank
-        else if (m_selected_action == 2 && m_system_online)
-        {
-            m_vessel_scroll = GUILayout.BeginScrollView(m_vessel_scroll);
-
-            m_dest_tanks = new List<Part>();
-            foreach (Part p in m_part.vessel.parts)
-            {
-                if (p.GetType() == typeof(FuelTank))
-                    m_dest_tanks.Add(p);
-            }
-
-            foreach (Part p in m_dest_tanks)
-            {
-                GUILayout.BeginHorizontal();
-                if (GUILayout.Button("Select", new GUIStyle(GUI.skin.button)))
+                else
                 {
-                    m_selected_dest_tank = p;
+                    GUILayout.Label("None Selected");
                 }
-                GUILayout.Label("Tank: " + p.name + " - " + Math.Round(((FuelTank)p).fuel, 1).ToString() + "L");
                 GUILayout.EndHorizontal();
-            }
+                GUI.color = savedColor;
+                #endregion
+                    #region Dest Vessel List
+                    m_dest_vessel_scroll = GUILayout.BeginScrollView(m_dest_vessel_scroll);
 
-            GUI.color = savedColor;
+                    // Draw all the vessels in the list vessels scroll view
+                    foreach (Vessel v in FlightGlobals.Vessels)
+                    {
+                        if (!v.vesselName.ToLower().Contains("debris") && v.isCommandable && v != null)
+                        {   // We want to make sure that this vessel is not debris and is a legitimate command pod
 
-            GUILayout.EndScrollView();
-        }
-        #endregion
-        #region Transfer Window
-        else if (m_selected_action == 3 && m_system_online)
-        {
-            m_transfer_amount_str = GUILayout.TextField(m_transfer_amount_str, new GUIStyle(GUI.skin.textField));
+                            // This calculate the distance from the current vessel (v) to ourselves
+                            //      Rounded to 2 decimal places
+                            double distance = (Math.Round(Math.Sqrt(Math.Pow(Math.Abs(v.transform.position.x - m_part.vessel.transform.position.x), 2)
+                                                                 + Math.Pow(Math.Abs(v.transform.position.y - m_part.vessel.transform.position.y), 2)
+                                                                 + Math.Pow(Math.Abs(v.transform.position.z - m_part.vessel.transform.position.z), 2)), 2));
+
+                            // If the distance is less than 2,000m we can now scan for fuel tanks
+                            //      TODO: We will want a stage closer than this that will be the ACTUAL refueling range
+                            if (distance < 2000d && is_refuel_target(v))
+                            {
+                                //GUILayout.Label(v.vesselName + " - is_refuel_target: " + is_refuel_target(v));
+                                GUILayout.BeginHorizontal();
+                                // If user clicks the select button make this vessel the active target
+                                if (GUILayout.Button("+", new GUIStyle(GUI.skin.button)))
+                                {
+                                    m_dest_vessel = v;
+                                    m_dest_tank = null;
+                                }
+
+                                // If this vessel is the Active Vessel, lets change the color and not include the distance
+                                if (FlightGlobals.ActiveVessel == v)
+                                {
+                                    GUI.color = Color.magenta;
+                                    GUILayout.Label(v.vesselName);
+                                }
+                                else
+                                {   // Standard green output for scannable vessels
+                                    GUI.color = Color.green;
+                                    GUILayout.Label(String.Format(v.vesselName + " - " + string.Format("{0:#,###0}", distance) + "m"));
+                                }
+                                GUI.color = savedColor;
+                                GUILayout.FlexibleSpace();
+                                GUILayout.EndHorizontal();
+                            }
+                            else if (distance <= PROXIMITY_DISTANCE)
+                            {   // This is for a "medium" contact range. Nearby Vessels. Set large for testing
+                                GUI.color = Color.yellow;
+                                GUILayout.Label(String.Format(v.vesselName + " - " + string.Format("{0:#,###0}", distance) + "m"));
+                                GUI.color = savedColor;
+                            }
+                            else
+                            {   // All other vessels. Greater than PROXIMITY_DISTANCE
+                                GUILayout.Label(String.Format(v.vesselName + " - " + string.Format("{0:#,###0}", distance) + "m"));
+                            }
+                        }
+                    }
+
+                    GUI.color = savedColor;
+
+                    GUILayout.EndScrollView();
+                    #endregion
+                    #region Dest Tank List
+                    GUILayout.Label("Dest Tank");
+                    m_dest_tanks_scroll = GUILayout.BeginScrollView(m_dest_tanks_scroll);
+
+                    m_dest_tanks = new List<Part>();
+                    if (m_dest_vessel != null)
+                    {
+                        foreach (Part p in m_dest_vessel.parts)
+                        {
+                            if (p.GetType() == typeof(FuelTank) && ((FuelTank)p).fuel > 0.0)
+                                m_dest_tanks.Add(p);
+                        }
+                    }
+                    foreach (Part p in m_dest_tanks)
+                    {
+                        GUILayout.BeginHorizontal();
+                        if (GUILayout.Button("+", new GUIStyle(GUI.skin.button)))
+                        {
+                            m_dest_tank = p;
+                        }
+                        GUILayout.Label(Math.Round(((FuelTank)p).fuel, 1).ToString() + "L");
+                        GUILayout.FlexibleSpace();
+                        GUILayout.EndHorizontal();
+                    }
+                    GUI.color = savedColor;
+                    GUILayout.EndScrollView();
+                    #endregion
+                    GUILayout.FlexibleSpace();
+                GUILayout.EndVertical();
+                #endregion
+            GUILayout.EndHorizontal();
+            #region Transfer Parameters
+            GUILayout.Label("Transfer Parameters");
+            #region Transfer Values
+            //GUILayout.BeginHorizontal();
+            GUILayout.Label("Amount: " + Math.Round(m_transfer_amount, 2).ToString() + " (" + Math.Round(m_transfer_amount_percent, 2) + "%)");
+            /*m_transfer_amount_str = GUILayout.TextField(m_transfer_amount_str, 10, new GUIStyle(GUI.skin.textField));
             try
             {
                 m_transfer_amount = (float)Convert.ToDouble(m_transfer_amount_str);
-				if (m_transfer_amount > ((FuelTank)m_selected_source_tank).fuel)
-				    m_transfer_amount = ((FuelTank)m_selected_source_tank).fuel;
+                if (m_transfer_amount > ((FuelTank)m_source_tank).fuel)
+                    m_transfer_amount = ((FuelTank)m_source_tank).fuel;
             }
             catch
             {
                 m_transfer_amount = 0;
-            }
+            }*/
+            //GUILayout.EndHorizontal();
+            m_transfer_amount_percent = GUILayout.HorizontalSlider(m_transfer_amount_percent, 0, 100);//((FuelTank)m_source_tank).fuel);
+            if (m_source_tank != null)
+                m_transfer_amount = ((FuelTank)m_source_tank).fuel * (m_transfer_amount_percent / 100);
+            else
+                m_transfer_amount = 0;
+            //GUILayout.BeginHorizontal();
+            GUILayout.Label("Flow Rate: ");
+            //m_transfer_rate = GUILayout.HorizontalSlider(m_transfer_rate, 0, 5, GUILayout.Width(125));
+            //m_transfer_rate_str = GUILayout.TextField(m_transfer_amount_str, 10, new GUIStyle(GUI.skin.textField));
+            //try
+            //{
+            //    m_transfer_rate = (float)Convert.ToDouble(m_transfer_amount_str);
+            //}
+            //catch
+            //{
+            //    m_transfer_rate = 0;
+            //}
+            //GUILayout.EndHorizontal();
+            #endregion
             if (GUILayout.Button("Transfer Now", new GUIStyle(GUI.skin.button)))
             {
-                ((FuelTank)m_selected_source_tank).fuel -= m_transfer_amount;
-                ((FuelTank)m_selected_dest_tank).fuel += m_transfer_amount;
+                ((FuelTank)m_source_tank).fuel -= m_transfer_amount;
+                ((FuelTank)m_dest_tank).fuel += m_transfer_amount;
             }
-            
-
+            #endregion
         }
-        #endregion
+
+        m_system_online = GUILayout.Toggle(m_system_online, "System Power", new GUIStyle(GUI.skin.button));
 
         GUI.DragWindow();
     }
@@ -430,8 +480,7 @@ public class FuelTransferCore
 
         if (m_parameters.windowed)
         {
-            bool showTallWindow = (m_system_online && m_selected_action < 3 && m_selected_action >= 0);
-            m_window_pos = GUILayout.Window(WINDOW_ID, m_window_pos, WindowGUI, "Fuel Transfer System", GUILayout.Width(350), GUILayout.Height((showTallWindow ? 400 : 100)));
+            m_window_pos = GUILayout.Window(WINDOW_ID, m_window_pos, WindowGUI, "Fuel Transfer System", GUILayout.Width(((m_system_online) ? 650 : 250)), GUILayout.Height(((m_system_online) ? 700 : 100)));
         }
     }
 
@@ -450,6 +499,7 @@ public class FuelTransferCore
         m_window_pos = new Rect(m_parameters.displayX, m_parameters.displayY, 10, 10);
 
         RenderingManager.AddToPostDrawQueue(3, new Callback(drawGUI));
+
     }
 
     public void onPartDestroy()
