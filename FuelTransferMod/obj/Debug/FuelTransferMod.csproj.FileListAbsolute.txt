@@ -1,0 +1,2 @@
+H:\KSP\KSP_win - FuelTransfer 0.16\Plugins\FuelTransferMod.dll
+H:\KSP\KSP_win - FuelTransfer 0.16\Plugins\FuelTransferMod.pdb

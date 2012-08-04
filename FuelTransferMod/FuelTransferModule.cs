@@ -56,7 +56,6 @@ public class FuelTransferPod : CommandPod
         parameters.displayY = displayY;
 
         core.applyParameters(parameters);
-
         core.onFlightStart();
         base.onFlightStart();
     }
@@ -78,12 +77,6 @@ public class FuelTransferPod : CommandPod
     /// </summary>
     protected override void onPartStart()
     {
-        print("FuelTransfer Log Test");
-
-        foreach (Vessel v in FlightGlobals.Vessels)
-        {
-            print("Vessel: " + v.vesselName);
-        }
     }
 
 
@@ -92,15 +85,15 @@ public class FuelTransferPod : CommandPod
 public class FuelTransferCore
 {
     #region Member Data
-    const int WINDOW_ID = 93318;
-    Rect m_window_pos = new Rect(125, 0, 10, 10);
+    const int WINDOW_ID = 93323;
+    Rect m_window_pos = new Rect(150, 20, 10, 10);
     FuelTransferParameters m_parameters;
 
     // The Part
     Part m_part;
 
     Vector2 m_vessel_scroll = new Vector2();
-    public RefuelTargets m_refuel_targets;
+    //public RefuelTargets m_refuel_targets;
 
 
     Vector2 m_source_tanks_scroll = new Vector2();
@@ -149,6 +142,8 @@ public class FuelTransferCore
 
     void WindowGUI(int windowID)
     {
+
+
         Color savedColor = GUI.color;
         #region Print Header & System Status
         GUILayout.Label("Welcome to the Kerlox Fueling System.");
@@ -220,7 +215,7 @@ public class FuelTransferCore
         m_system_online = GUILayout.Toggle(m_system_online, "System Power", new GUIStyle(GUI.skin.button));
         if (m_system_online)
         {
-            String[] options = {"Select Source Tank", "List Vessels", "Select Dest Tank", "Transfer"};
+            String[] options = {"List Vessels", "Select Source Tank", "Select Dest Tank", "Transfer"};
             m_selected_action = GUILayout.SelectionGrid(m_selected_action, options, 4, GUI.skin.button);
         }
         GUILayout.EndHorizontal();
@@ -230,54 +225,50 @@ public class FuelTransferCore
         {
             m_vessel_scroll = GUILayout.BeginScrollView(m_vessel_scroll);
 
-            List<Vessel> refuel_targets = new List<Vessel>();
-            if (m_refuel_targets != null)
-            {
-                foreach (RefuelTarget target in m_refuel_targets.targets)
-                {
-                    double distance = (Math.Round(Math.Sqrt(Math.Pow(Math.Abs(target.Position.x - m_part.vessel.transform.position.x), 2)
-                                                                                 + Math.Pow(Math.Abs(target.Position.y - m_part.vessel.transform.position.y), 2)
-                                                                                 + Math.Pow(Math.Abs(target.Position.z - m_part.vessel.transform.position.z), 2)), 2));
-                    if ((target.Vessel != null) && is_refuel_target(target.Vessel) && distance < 100000) 
-                         refuel_targets.Add(target.Vessel);
-                }
-            }
-
-            savedColor = GUI.color;
-            //list the targets
-            foreach (Vessel v in refuel_targets)
-            {
-                double distance = (Math.Round(Math.Sqrt(Math.Pow(Math.Abs(v.transform.position.x - m_part.vessel.transform.position.x), 2)
-                                                                                                 + Math.Pow(Math.Abs(v.transform.position.y - m_part.vessel.transform.position.y), 2)
-                                                                                                 + Math.Pow(Math.Abs(v.transform.position.z - m_part.vessel.transform.position.z), 2)), 2));
-                GUILayout.BeginHorizontal();
-                if (GUILayout.Button("Select", new GUIStyle(GUI.skin.button)))
-                {
-                    m_selected_target = v;
-                }
-                GUI.color = Color.green;
-                GUILayout.Label(String.Format("FT: " + v.vesselName + " - " + string.Format("{0:#,###0}", distance) + "km"));
-                GUI.color = savedColor;
-                GUILayout.EndHorizontal();
-                //GUILayout.Label(String.Format("Target: " + v.vesselName + ": {0:0} km above " + v.mainBody.name, ((v.transform.position - v.mainBody.position).magnitude - v.mainBody.Radius) / 1000.0));
-            }
-            
-            GUI.color = savedColor;
-
             //list the non targets
             foreach (Vessel v in FlightGlobals.Vessels)
             {
-                if (!refuel_targets.Contains(v) && !v.vesselName.ToLower().Contains("debris"))
+                if (!v.vesselName.ToLower().Contains("debris") && v.isCommandable && v != null)
                 {
-                    //GUILayout.Label(String.Format(v.vesselName + ": {0:0} km above " + v.mainBody.name, ((v.transform.position - v.mainBody.position).magnitude - v.mainBody.Radius) / 1000.0));
-
                     double distance = (Math.Round(Math.Sqrt(Math.Pow(Math.Abs(v.transform.position.x - m_part.vessel.transform.position.x), 2)
-                                                                                                     + Math.Pow(Math.Abs(v.transform.position.y - m_part.vessel.transform.position.y), 2)
-                                                                                                     + Math.Pow(Math.Abs(v.transform.position.z - m_part.vessel.transform.position.z), 2)), 2));
-                    GUILayout.Label(String.Format(v.vesselName + " - " + string.Format("{0:#,###0}", distance) + "km"));
+                                                                             + Math.Pow(Math.Abs(v.transform.position.y - m_part.vessel.transform.position.y), 2)
+                                                                             + Math.Pow(Math.Abs(v.transform.position.z - m_part.vessel.transform.position.z), 2)), 2));
+                    if (distance < 2000d && is_refuel_target(v))
+                    {
+                        //GUILayout.Label(v.vesselName + " - is_refuel_target: " + is_refuel_target(v));
+                        GUILayout.BeginHorizontal();
+                        if (GUILayout.Button("Select", new GUIStyle(GUI.skin.button)))
+                        {
+                            m_selected_target = v;
+                        }
+                        if (FlightGlobals.ActiveVessel == v)
+                        {
+                            GUI.color = Color.magenta;
+                            GUILayout.Label(v.vesselName + " (Self)");
+                        }
+                        else
+                        {
+                            GUI.color = Color.green;
+                            GUILayout.Label(String.Format(v.vesselName + " - " + string.Format("{0:#,###0}", distance) + "m"));
+                        }
+                        GUI.color = savedColor;
+                        GUILayout.EndHorizontal();
+                    }
+                    else if (distance < 100000d)
+                    {
+                        GUI.color = Color.yellow;
+                        GUILayout.Label(String.Format(v.vesselName + " - " + string.Format("{0:#,###0}", distance) + "m"));
+                        GUI.color = savedColor;
+                    }
+                    else
+                    {
+
+                        GUILayout.Label(String.Format(v.vesselName + " - " + string.Format("{0:#,###0}", distance) + "m"));
+                    }
                 }
             }
-        
+               
+            GUI.color = savedColor;
 
             GUILayout.EndScrollView();
         }
@@ -341,7 +332,7 @@ public class FuelTransferCore
         #region Transfer Window
         else if (m_selected_action == 3 && m_system_online)
         {
-            m_transfer_amount_str =GUILayout.TextField(m_transfer_amount_str, new GUIStyle(GUI.skin.textField));
+            m_transfer_amount_str = GUILayout.TextField(m_transfer_amount_str, new GUIStyle(GUI.skin.textField));
             try
             {
                 m_transfer_amount = (float)Convert.ToDouble(m_transfer_amount_str);
@@ -368,6 +359,8 @@ public class FuelTransferCore
 
     void drawGUI()
     {
+        if (FlightGlobals.ActiveVessel != m_part.vessel)
+            return;
 
         GUI.skin = HighLogic.Skin;
 
@@ -385,49 +378,23 @@ public class FuelTransferCore
     {
         if (FlightGlobals.ActiveVessel != m_part.vessel)
             return;
-
-        
-        if (m_ticks_since_target_check++ > 100)
-        {
-            m_ticks_since_target_check = 0;
-
-            List<Vessel> targets = new List<Vessel>();
-
-            // Loop through vessels and find possible refueling targets
-            foreach (Vessel v in FlightGlobals.Vessels)
-                if (is_refuel_target(v))
-                    targets.Add(v);
-        }
     }
 
     public void onFlightStart()
     {
-        print("--------ARRemoteCore m_parameters--------");
-        print("ARRemoteCore: basePlanet = " + m_parameters.basePlanet);
-        print("ARRemoteCore: baseLatitude = " + m_parameters.baseLatitude);
-        print("ARRemoteCore: baseLongitude = " + m_parameters.baseLongitude);
-        print("ARRemoteCore: windowed = " + m_parameters.windowed);
-        print("ARRemoteCore: displayX = " + m_parameters.displayX);
-        print("ARRemoteCore: displayY = " + m_parameters.displayY);
-
         m_window_pos = new Rect(m_parameters.displayX, m_parameters.displayY, 10, 10);
 
-        FlightInputHandler.OnFlyByWire += new FlightInputHandler.FlightInputCallback(this.drive);
-        
         RenderingManager.AddToPostDrawQueue(3, new Callback(drawGUI));
 
     }
 
     public void onPartDestroy()
     {
-
-        FlightInputHandler.OnFlyByWire -= new FlightInputHandler.FlightInputCallback(this.drive);
         RenderingManager.RemoveFromPostDrawQueue(3, new Callback(drawGUI)); //close the GUI
     }
 
     public void onDisconnect()
     {
-        FlightInputHandler.OnFlyByWire -= new FlightInputHandler.FlightInputCallback(this.drive);
         RenderingManager.RemoveFromPostDrawQueue(3, new Callback(drawGUI)); //close the GUI
     }
 
@@ -438,91 +405,3 @@ public class FuelTransferCore
 }
 
 
-public class RefuelTarget : IEquatable<RefuelTarget>
-{
-    Vessel vessel;
-    Vector3d position;
-
-    public RefuelTarget(Vessel v)
-    {
-        this.vessel = v;
-        this.position = v.transform.position;
-    }
-
-    public RefuelTarget(Vector3d pos)
-    {
-        this.vessel = null;
-        this.position = pos;
-    }
-
-    public Vessel Vessel
-    {
-        get
-        {
-            return this.vessel;
-        }
-    }
-
-    public Vector3d Position
-    {
-        get
-        {
-            if (this.vessel != null) return this.vessel.transform.position;
-            else return this.position;
-        }
-    }
-
-    public bool IsBase
-    {
-        get
-        {
-            return (this.vessel == null);
-        }
-    }
-
-    public bool Equals(RefuelTarget other)
-    {
-        return (this.Vessel == other.Vessel && this.Position == other.Position);
-    }
-
-    public override String ToString()
-    {
-        return ((this.vessel == null) ? "Mission Control" : this.vessel.vesselName);
-    }
-}
-
-public class RefuelTargets
-{
-    public List<RefuelTarget> targets = new List<RefuelTarget>();
-
-    public RefuelTargets(List<RefuelTarget> nodes)
-    {
-        this.targets = nodes;
-    }
-
-    public double Length
-    {
-        get
-        {
-            double length = 0;
-            for (int i = 1; i < targets.Count; i++)
-            {
-                length += (targets[i].Position - targets[i - 1].Position).magnitude;
-            }
-            return length;
-        }
-    }
-
-    public override String ToString()
-    {
-        String ret;
-        if (targets.Count > 0) ret = targets[targets.Count - 1].ToString();
-        else ret = "empty path???????";
-
-        for (int i = targets.Count - 2; i >= 0; i--)
-        {
-            ret += " → " + targets[i].ToString();
-        }
-        return ret;
-    }
-}
