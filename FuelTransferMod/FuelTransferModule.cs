@@ -86,7 +86,8 @@ public class FuelTransferCore
 {
     #region Member Data
     const int WINDOW_ID = 93323;
-    Rect m_window_pos = new Rect(150, 20, 10, 10);
+    const double PROXIMITY_DISTANCE = 50000d; // 50KM
+    Rect m_window_pos = new Rect(200, 50, 10, 10);
     FuelTransferParameters m_parameters;
 
     // The Part
@@ -101,13 +102,8 @@ public class FuelTransferCore
 
     public List<Part> m_dest_tanks = new List<Part>();
 
-    int m_ticks_since_target_check = 0;
-
     // UI Toggles
     bool m_system_online = false;
-    bool m_list_vessels = false;
-    bool m_select_source_tank = false;
-    bool m_select_dest_tank = false;
 
     // making the above 4 bools obsolete
     int m_selected_action = -1;
@@ -225,44 +221,52 @@ public class FuelTransferCore
         {
             m_vessel_scroll = GUILayout.BeginScrollView(m_vessel_scroll);
 
-            //list the non targets
+            // Draw all the vessels in the list vessels scroll view
             foreach (Vessel v in FlightGlobals.Vessels)
             {
                 if (!v.vesselName.ToLower().Contains("debris") && v.isCommandable && v != null)
-                {
+                {   // We want to make sure that this vessel is not debris and is a legitimate command pod
+
+                    // This calculate the distance from the current vessel (v) to ourselves
+                    //      Rounded to 2 decimal places
                     double distance = (Math.Round(Math.Sqrt(Math.Pow(Math.Abs(v.transform.position.x - m_part.vessel.transform.position.x), 2)
-                                                                             + Math.Pow(Math.Abs(v.transform.position.y - m_part.vessel.transform.position.y), 2)
-                                                                             + Math.Pow(Math.Abs(v.transform.position.z - m_part.vessel.transform.position.z), 2)), 2));
+                                                         + Math.Pow(Math.Abs(v.transform.position.y - m_part.vessel.transform.position.y), 2)
+                                                         + Math.Pow(Math.Abs(v.transform.position.z - m_part.vessel.transform.position.z), 2)), 2));
+
+                    // If the distance is less than 2,000m we can now scan for fuel tanks
+                    //      TODO: We will want a stage closer than this that will be the ACTUAL refueling range
                     if (distance < 2000d && is_refuel_target(v))
                     {
                         //GUILayout.Label(v.vesselName + " - is_refuel_target: " + is_refuel_target(v));
                         GUILayout.BeginHorizontal();
+                        // If user clicks the select button make this vessel the active target
                         if (GUILayout.Button("Select", new GUIStyle(GUI.skin.button)))
                         {
                             m_selected_target = v;
                         }
+
+                        // If this vessel is the Active Vessel, lets change the color and not include the distance
                         if (FlightGlobals.ActiveVessel == v)
                         {
                             GUI.color = Color.magenta;
                             GUILayout.Label(v.vesselName + " (Self)");
                         }
                         else
-                        {
+                        {   // Standard green output for scannable vessels
                             GUI.color = Color.green;
                             GUILayout.Label(String.Format(v.vesselName + " - " + string.Format("{0:#,###0}", distance) + "m"));
                         }
                         GUI.color = savedColor;
                         GUILayout.EndHorizontal();
                     }
-                    else if (distance < 100000d)
-                    {
+                    else if (distance <= PROXIMITY_DISTANCE)
+                    {   // This is for a "medium" contact range. Nearby Vessels. Set large for testing
                         GUI.color = Color.yellow;
                         GUILayout.Label(String.Format(v.vesselName + " - " + string.Format("{0:#,###0}", distance) + "m"));
                         GUI.color = savedColor;
                     }
                     else
-                    {
-
+                    {   // All other vessels. Greater than PROXIMITY_DISTANCE
                         GUILayout.Label(String.Format(v.vesselName + " - " + string.Format("{0:#,###0}", distance) + "m"));
                     }
                 }
@@ -325,7 +329,6 @@ public class FuelTransferCore
 
             GUI.color = savedColor;
 
-
             GUILayout.EndScrollView();
         }
         #endregion
@@ -353,12 +356,13 @@ public class FuelTransferCore
         }
         #endregion
 
-
         GUI.DragWindow();
     }
 
     void drawGUI()
     {
+        // Without this, when two FuelTransferPods were within 2km of each other,
+        //      the plugin will crash as it will not know for which vessel to draw the menu
         if (FlightGlobals.ActiveVessel != m_part.vessel)
             return;
 
@@ -403,5 +407,3 @@ public class FuelTransferCore
         MonoBehaviour.print(s);
     }
 }
-
-
