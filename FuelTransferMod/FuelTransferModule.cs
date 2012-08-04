@@ -81,7 +81,72 @@ public class FuelTransferPod : CommandPod
 
 
 }
+public class FuelTransferModule : Part
+{
+    //see cfg file for explanation of m_parameters
+    public String basePlanet = "Kerbin";
+    public double baseLatitude = -0.103;
+    public double baseLongitude = -74.570;
+    public bool windowed = true;
+    public float displayX = 125;
+    public float displayY = 0;
 
+    FuelTransferParameters parameters;
+
+    FuelTransferCore core;
+
+    public FuelTransferModule()
+    {
+        core = new FuelTransferCore(this);
+    }
+
+    protected override void onPartAwake()
+    {
+        base.onPartAwake();
+    }
+
+    protected override void onPartFixedUpdate()
+    {
+        core.onPartFixedUpdate();
+        base.onPartFixedUpdate();
+    }
+
+
+    protected override void onFlightStart()
+    {
+        parameters.basePlanet = basePlanet;
+        parameters.baseLatitude = baseLatitude;
+        parameters.baseLongitude = baseLongitude;
+        parameters.windowed = windowed;
+        parameters.displayX = displayX;
+        parameters.displayY = displayY;
+
+        core.applyParameters(parameters);
+        core.onFlightStart();
+        base.onFlightStart();
+    }
+
+    protected override void onPartDestroy()
+    {
+        core.onPartDestroy();
+        base.onPartDestroy();
+    }
+
+    protected override void onDisconnect()
+    {
+        core.onDisconnect();
+        base.onDisconnect();
+    }
+
+    /// <summary>
+    /// Called when the m_part is started by Unity
+    /// </summary>
+    protected override void onPartStart()
+    {
+    }
+
+
+}
 public class FuelTransferCore
 {
     #region Member Data
