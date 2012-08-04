@@ -78,8 +78,67 @@ public class FuelTransferPod : CommandPod
     protected override void onPartStart()
     {
     }
+}
+
+public class FuelTransferModule : Part
+{
+    //see cfg file for explanation of m_parameters
+    public String basePlanet = "Kerbin";
+    public double baseLatitude = -0.103;
+    public double baseLongitude = -74.570;
+    public bool windowed = true;
+    public float displayX = 125;
+    public float displayY = 0;
+
+    FuelTransferParameters parameters;
+
+    FuelTransferCore core;
+
+    protected override void onPartAwake()
+    {
+        base.onPartAwake();
+    }
+
+    protected override void onPartFixedUpdate()
+    {
+        core.onPartFixedUpdate();
+        base.onPartFixedUpdate();
+    }
 
 
+    protected override void onFlightStart()
+    {
+        parameters.basePlanet = basePlanet;
+        parameters.baseLatitude = baseLatitude;
+        parameters.baseLongitude = baseLongitude;
+        parameters.windowed = windowed;
+        parameters.displayX = displayX;
+        parameters.displayY = displayY;
+
+        core.applyParameters(parameters);
+        core.onFlightStart();
+        base.onFlightStart();
+    }
+
+    protected override void onPartDestroy()
+    {
+        core.onPartDestroy();
+        base.onPartDestroy();
+    }
+
+    protected override void onDisconnect()
+    {
+        core.onDisconnect();
+        base.onDisconnect();
+    }
+
+    /// <summary>
+    /// Called when the m_part is started by Unity
+    /// </summary>
+    protected override void onPartStart()
+    {
+        core = new FuelTransferCore(this);
+    }
 }
 
 public class FuelTransferCore
@@ -222,6 +281,7 @@ public class FuelTransferCore
             m_vessel_scroll = GUILayout.BeginScrollView(m_vessel_scroll);
 
             // Draw all the vessels in the list vessels scroll view
+            //list the non targets
             foreach (Vessel v in FlightGlobals.Vessels)
             {
                 if (!v.vesselName.ToLower().Contains("debris") && v.isCommandable && v != null)
@@ -370,7 +430,8 @@ public class FuelTransferCore
 
         if (m_parameters.windowed)
         {
-            m_window_pos = GUILayout.Window(WINDOW_ID, m_window_pos, WindowGUI, "Fuel Transfer System", GUILayout.Width(350), GUILayout.Height(((m_selected_action >= 0) ? 400 : 100)));
+            bool showTallWindow = (m_system_online && m_selected_action < 3 && m_selected_action >= 0);
+            m_window_pos = GUILayout.Window(WINDOW_ID, m_window_pos, WindowGUI, "Fuel Transfer System", GUILayout.Width(350), GUILayout.Height((showTallWindow ? 400 : 100)));
         }
     }
 
@@ -389,7 +450,6 @@ public class FuelTransferCore
         m_window_pos = new Rect(m_parameters.displayX, m_parameters.displayY, 10, 10);
 
         RenderingManager.AddToPostDrawQueue(3, new Callback(drawGUI));
-
     }
 
     public void onPartDestroy()
