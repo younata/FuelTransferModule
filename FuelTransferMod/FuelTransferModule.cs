@@ -172,15 +172,8 @@ public class FuelTransferCore
     // UI Toggles
     bool m_system_online = false;
 
-    // making the above 4 bools obsolete
-    int m_selected_action = -1;
-
-    string m_transfer_amount_str = "0";
     float m_transfer_amount = 0;
     float m_transfer_amount_percent = 0;
-
-    string m_transfer_rate_str = "0";
-    float m_transfer_rate = 0;
 
     Vessel m_source_vessel = null;
     Part m_source_tank = null;
@@ -198,11 +191,11 @@ public class FuelTransferCore
         this.m_parameters = parameters;
     }
 
-    //decide whether a vessel has fueltanks!
+    //decide whether a vessel has fueltanks with fuel left in them!
     bool is_refuel_target (Vessel v)
 	{
 		foreach (Part p in v.parts) {
-			if (p.GetType() == typeof(FuelTank))
+			if (p.GetType() == typeof(FuelTank) && ((FuelTank)p).fuel > 0)
 				return true;
 		}
 		return false;
@@ -210,8 +203,6 @@ public class FuelTransferCore
 
     void WindowGUI(int windowID)
     {
-
-
         Color savedColor = GUI.color;
         #region Print Header & System Status
         GUILayout.Label("Welcome to the Kerlox Fueling System.");
@@ -401,8 +392,9 @@ public class FuelTransferCore
                     foreach (Vessel v in FlightGlobals.Vessels)
                     {
                         if (!v.vesselName.ToLower().Contains("debris") && v.isCommandable && v != null)
-                        {   // We want to make sure that this vessel is not debris and is a legitimate command pod
-
+                        { /* Don't care about whether or not it's debris, or even if it has a command pod.
+                             Only care if it has a fuel tank on it.
+                            */
                             // This calculate the distance from the current vessel (v) to ourselves
                             //      Rounded to 2 decimal places
                             double distance = (Math.Round(Math.Sqrt(Math.Pow(Math.Abs(v.transform.position.x - m_part.vessel.transform.position.x), 2)
@@ -410,7 +402,7 @@ public class FuelTransferCore
                                                                  + Math.Pow(Math.Abs(v.transform.position.z - m_part.vessel.transform.position.z), 2)), 2));
 
                             // If the distance is less than 2,000m we can now scan for fuel tanks
-                            //      TODO: We will want a stage closer than this that will be the ACTUAL refueling range
+                            // TODO: We will want a stage closer than this that will be the ACTUAL refueling range
                             if (distance < 2000d && is_refuel_target(v))
                             {
                                 //GUILayout.Label(v.vesselName + " - is_refuel_target: " + is_refuel_target(v));
@@ -488,42 +480,20 @@ public class FuelTransferCore
             #region Transfer Parameters
             GUILayout.Label("Transfer Parameters");
             #region Transfer Values
-            //GUILayout.BeginHorizontal();
             GUILayout.Label("Amount: " + Math.Round(m_transfer_amount, 2).ToString() + " (" + Math.Round(m_transfer_amount_percent, 2) + "%)");
-            /*m_transfer_amount_str = GUILayout.TextField(m_transfer_amount_str, 10, new GUIStyle(GUI.skin.textField));
-            try
-            {
-                m_transfer_amount = (float)Convert.ToDouble(m_transfer_amount_str);
-                if (m_transfer_amount > ((FuelTank)m_source_tank).fuel)
-                    m_transfer_amount = ((FuelTank)m_source_tank).fuel;
-            }
-            catch
-            {
-                m_transfer_amount = 0;
-            }*/
-            //GUILayout.EndHorizontal();
             m_transfer_amount_percent = GUILayout.HorizontalSlider(m_transfer_amount_percent, 0, 100);//((FuelTank)m_source_tank).fuel);
             if (m_source_tank != null)
                 m_transfer_amount = ((FuelTank)m_source_tank).fuel * (m_transfer_amount_percent / 100);
             else
                 m_transfer_amount = 0;
-            //GUILayout.BeginHorizontal();
             GUILayout.Label("Flow Rate: ");
-            //m_transfer_rate = GUILayout.HorizontalSlider(m_transfer_rate, 0, 5, GUILayout.Width(125));
-            //m_transfer_rate_str = GUILayout.TextField(m_transfer_amount_str, 10, new GUIStyle(GUI.skin.textField));
-            //try
-            //{
-            //    m_transfer_rate = (float)Convert.ToDouble(m_transfer_amount_str);
-            //}
-            //catch
-            //{
-            //    m_transfer_rate = 0;
-            //}
-            //GUILayout.EndHorizontal();
             #endregion
             if (GUILayout.Button("Transfer Now", new GUIStyle(GUI.skin.button)))
             {
-                ((FuelTank)m_source_tank).fuel -= m_transfer_amount;
+                //((FuelTank)m_source_tank).fuel -= m_transfer_amount;
+                //((FuelTank)m_dest_tank).State = PartStates.ACTIVE;
+                ((FuelTank)m_source_tank).RequestFuel((FuelTank)m_dest_tank, m_transfer_amount, m_dest_tank.uid);
+                // not sure if I want to be using this method or not, it is the built in, and it 
                 ((FuelTank)m_dest_tank).fuel += m_transfer_amount;
             }
             #endregion
@@ -545,7 +515,17 @@ public class FuelTransferCore
 
         if (m_parameters.windowed)
         {
-            m_window_pos = GUILayout.Window(WINDOW_ID, m_window_pos, WindowGUI, "Fuel Transfer System", GUILayout.Width(((m_system_online) ? 650 : 250)), GUILayout.Height(((m_system_online) ? 700 : 100)));
+            float activeHeight = 500;
+            float heightMultiplier = 25;
+            float tanksCount;
+            if (m_source_tanks.Count > m_dest_tanks.Count)
+                tanksCount = m_source_tanks.Count;
+            else
+                tanksCount = m_dest_tanks.Count;
+            activeHeight += tanksCount * heightMultiplier;
+            if (tanksCount > 8)
+                activeHeight = 700;
+            m_window_pos = GUILayout.Window(WINDOW_ID, m_window_pos, WindowGUI, "Fuel Transfer System", GUILayout.Width(((m_system_online) ? 650 : 250)), GUILayout.Height(((m_system_online) ? activeHeight : 100)));
         }
     }
 
