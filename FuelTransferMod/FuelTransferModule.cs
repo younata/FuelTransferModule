@@ -328,7 +328,7 @@ public class FuelTransferCore
                     {
                         foreach (Part p in m_source_vessel.parts)
                         {
-                            if (p.GetType() == typeof(FuelTank) && ((FuelTank)p).fuel > 0.0)
+                            if (p.GetType() == typeof(FuelTank) && ((FuelTank)p).fuel > 0.0 && p.State == PartStates.ACTIVE)
                                 m_source_tanks.Add(p);
                         }
                     }
@@ -455,7 +455,7 @@ public class FuelTransferCore
                     {
                         foreach (Part p in m_dest_vessel.parts)
                         {
-                            if (p.GetType() == typeof(FuelTank) && ((FuelTank)p).fuel > 0.0)
+                            if (p.GetType() == typeof(FuelTank) && p.State == PartStates.ACTIVE)
                                 m_dest_tanks.Add(p);
                         }
                     }
