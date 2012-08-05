@@ -492,9 +492,12 @@ public class FuelTransferCore
             {
                 //((FuelTank)m_source_tank).fuel -= m_transfer_amount;
                 //((FuelTank)m_dest_tank).State = PartStates.ACTIVE;
+                m_dest_tank.activate();
                 ((FuelTank)m_source_tank).RequestFuel((FuelTank)m_dest_tank, m_transfer_amount, m_dest_tank.uid);
                 // not sure if I want to be using this method or not, it is the built in, and it 
                 ((FuelTank)m_dest_tank).fuel += m_transfer_amount;
+                if (((FuelTank)m_source_tank).fuel == 0f)
+                    m_source_tank.deactivate();
             }
             #endregion
         }
