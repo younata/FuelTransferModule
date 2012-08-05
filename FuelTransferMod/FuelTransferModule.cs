@@ -201,6 +201,14 @@ public class FuelTransferCore
 		return false;
     }
 
+    double distanceBetweenVessels (Vessel a, Vessel b)
+    {
+        double distance = (Math.Round(Math.Sqrt(Math.Pow(Math.Abs(a.transform.position.x - b.transform.position.x), 2)
+                                                             + Math.Pow(Math.Abs(a.transform.position.y - b.transform.position.y), 2)
+                                                             + Math.Pow(Math.Abs(a.transform.position.z - b.transform.position.z), 2)), 2));
+        return distance;
+    }
+
     void WindowGUI(int windowID)
     {
         Color savedColor = GUI.color;
@@ -270,9 +278,7 @@ public class FuelTransferCore
 
                         // This calculate the distance from the current vessel (v) to ourselves
                         //      Rounded to 2 decimal places
-                        double distance = (Math.Round(Math.Sqrt(Math.Pow(Math.Abs(v.transform.position.x - m_part.vessel.transform.position.x), 2)
-                                                             + Math.Pow(Math.Abs(v.transform.position.y - m_part.vessel.transform.position.y), 2)
-                                                             + Math.Pow(Math.Abs(v.transform.position.z - m_part.vessel.transform.position.z), 2)), 2));
+                        double distance = distanceBetweenVessels (v, m_part.vessel);
 
                         // If the distance is less than 2,000m we can now scan for fuel tanks
                         //      TODO: We will want a stage closer than this that will be the ACTUAL refueling range
@@ -397,9 +403,7 @@ public class FuelTransferCore
                             */
                             // This calculate the distance from the current vessel (v) to ourselves
                             //      Rounded to 2 decimal places
-                            double distance = (Math.Round(Math.Sqrt(Math.Pow(Math.Abs(v.transform.position.x - m_part.vessel.transform.position.x), 2)
-                                                                 + Math.Pow(Math.Abs(v.transform.position.y - m_part.vessel.transform.position.y), 2)
-                                                                 + Math.Pow(Math.Abs(v.transform.position.z - m_part.vessel.transform.position.z), 2)), 2));
+                            double distance = distanceBetweenVessels(v, m_part.vessel);
 
                             // If the distance is less than 2,000m we can now scan for fuel tanks
                             // TODO: We will want a stage closer than this that will be the ACTUAL refueling range
@@ -490,11 +494,8 @@ public class FuelTransferCore
             #endregion
             if (GUILayout.Button("Transfer Now", new GUIStyle(GUI.skin.button)))
             {
-                //((FuelTank)m_source_tank).fuel -= m_transfer_amount;
-                //((FuelTank)m_dest_tank).State = PartStates.ACTIVE;
                 m_dest_tank.activate();
                 ((FuelTank)m_source_tank).RequestFuel((FuelTank)m_dest_tank, m_transfer_amount, m_dest_tank.uid);
-                // not sure if I want to be using this method or not, it is the built in, and it 
                 ((FuelTank)m_dest_tank).fuel += m_transfer_amount;
                 if (((FuelTank)m_source_tank).fuel == 0f)
                     m_source_tank.deactivate();
@@ -545,9 +546,7 @@ public class FuelTransferCore
     public void onFlightStart()
     {
         m_window_pos = new Rect(m_parameters.displayX, m_parameters.displayY, 10, 10);
-
         RenderingManager.AddToPostDrawQueue(3, new Callback(drawGUI));
-
     }
 
     public void onPartDestroy()
