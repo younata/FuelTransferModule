@@ -245,7 +245,15 @@ public class FuelTransferCore
             #region Fuel Type Selection
             GUILayout.Label ("Select Fuel Type:");
             String[] fuelTypeStrings = {"Regular Fuel", "RCS Fuel"};
-            m_fuel_type = GUILayout.SelectionGrid(m_fuel_type, fuelTypeStrings, 2, GUI.skin.button);
+            int foo;
+            if ((foo = GUILayout.SelectionGrid(m_fuel_type, fuelTypeStrings, 2, GUI.skin.button)) != m_fuel_type)
+            {
+                m_dest_tank = null;
+                m_dest_vessel = null;
+                m_source_tank = null;
+                m_source_vessel = null;
+            }
+            m_fuel_type = foo;
             GUILayout.EndHorizontal();
             #endregion
             GUILayout.BeginHorizontal();
