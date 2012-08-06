@@ -345,10 +345,12 @@ public class FuelTransferCore
                             GUILayout.Label(String.Format(v.vesselName + " - " + string.Format("{0:#,###0}", distance) + "m"));
                             GUI.color = savedColor;
                         }
+                    /*
                         else
                         {   // All other vessels. Greater than PROXIMITY_DISTANCE
                             GUILayout.Label(String.Format(v.vesselName + " - " + string.Format("{0:#,###0}", distance) + "m"));
                         }
+                    */
                     }
                 }
 
@@ -487,10 +489,12 @@ public class FuelTransferCore
                                 GUILayout.Label(String.Format(v.vesselName + " - " + string.Format("{0:#,###0}", distance) + "m"));
                                 GUI.color = savedColor;
                             }
+                    /*
                             else
                             {   // All other vessels. Greater than PROXIMITY_DISTANCE
                                 GUILayout.Label(String.Format(v.vesselName + " - " + string.Format("{0:#,###0}", distance) + "m"));
                             }
+                    */
                         }
                     }
 
@@ -509,12 +513,12 @@ public class FuelTransferCore
                         {
                             if (m_fuel_type == RegularFuel)
                             {
-                                if (p.GetType() == typeof(FuelTank) && (p.State == PartStates.ACTIVE || p.State == PartStates.IDLE))
+                                if (p.GetType() == typeof(FuelTank) && ((FuelTank)p).fuel > 0f && (p.State == PartStates.ACTIVE || p.State == PartStates.IDLE))
                                     m_dest_tanks.Add(p);
                             }
                             else
                             {
-                                if (p.GetType() == typeof(RCSFuelTank) && (p.State == PartStates.ACTIVE || p.State == PartStates.IDLE))
+                                if (p.GetType() == typeof(RCSFuelTank) && ((RCSFuelTank)p).fuel > 0f && (p.State == PartStates.ACTIVE || p.State == PartStates.IDLE))
                                     m_dest_tanks.Add(p);
                             }
                         }
