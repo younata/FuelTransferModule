@@ -360,16 +360,12 @@ public class FuelTransferCore
                             if (m_fuel_type == RegularFuel)
                             {
                                 if (p.GetType() == typeof(FuelTank) && ((FuelTank)p).fuel > 0.0 && (p.State == PartStates.ACTIVE || p.State == PartStates.IDLE))
-                                {
                                     m_source_tanks.Add(p);
-                                }
                             }
                             else
                             {
                                 if (p.GetType() == typeof(RCSFuelTank) && ((RCSFuelTank)p).fuel > 0.0 && (p.State == PartStates.ACTIVE || p.State == PartStates.IDLE))
-                                {
                                     m_source_tanks.Add(p);
-                                }
                             }
                         }
                     }
@@ -505,12 +501,12 @@ public class FuelTransferCore
                         {
                             if (m_fuel_type == RegularFuel)
                             {
-                                if (p.GetType() == typeof(FuelTank) && p.State == PartStates.ACTIVE)
+                                if (p.GetType() == typeof(FuelTank) && (p.State == PartStates.ACTIVE || p.State == PartStates.IDLE))
                                     m_dest_tanks.Add(p);
                             }
                             else
                             {
-                                if (p.GetType() == typeof(RCSFuelTank) && p.State != PartStates.DEACTIVATED)
+                                if (p.GetType() == typeof(RCSFuelTank) && (p.State == PartStates.ACTIVE || p.State == PartStates.IDLE))
                                     m_dest_tanks.Add(p);
                             }
                         }
@@ -559,8 +555,11 @@ public class FuelTransferCore
                 {
                     ((FuelTank)m_source_tank).RequestFuel((FuelTank)m_dest_tank, m_transfer_amount, m_dest_tank.uid);
                     ((FuelTank)m_dest_tank).fuel += m_transfer_amount;
-                    if (((FuelTank)m_source_tank).fuel == 0f)
+                    if (((FuelTank)m_source_tank).fuel <= 0f)
+                    {
                         m_source_tank.deactivate();
+                        m_source_tank = null;
+                    }
                 }
                 else
                 {
@@ -568,8 +567,11 @@ public class FuelTransferCore
                     // doesn't work...
                     ((RCSFuelTank)m_source_tank).fuel -= m_transfer_amount;
                     ((RCSFuelTank)m_dest_tank).fuel += m_transfer_amount;
-                    if (((RCSFuelTank)m_source_tank).fuel == 0f)
+                    if (((RCSFuelTank)m_source_tank).fuel <= 0f)
+                    {
                         m_source_tank.deactivate();
+                        m_source_tank = null;
+                    }
                 }
             }
             #endregion
@@ -591,7 +593,7 @@ public class FuelTransferCore
 
         if (m_parameters.windowed)
         {
-            float activeHeight = 525;
+            float activeHeight = 550;
             float heightMultiplier = 25;
             float tanksCount;
             if (m_source_tanks.Count > m_dest_tanks.Count)
@@ -599,7 +601,7 @@ public class FuelTransferCore
             else
                 tanksCount = m_dest_tanks.Count;
             activeHeight += tanksCount * heightMultiplier;
-            if (tanksCount > 7)
+            if (tanksCount > 6)
                 activeHeight = 700;
             m_window_pos = GUILayout.Window(WINDOW_ID, m_window_pos, WindowGUI, "Fuel Transfer System", GUILayout.Width(((m_system_online) ? 650 : 250)), GUILayout.Height(((m_system_online) ? activeHeight : 100)));
         }
