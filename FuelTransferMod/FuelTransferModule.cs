@@ -175,6 +175,10 @@ public class FuelTransferCore
     float m_transfer_amount = 0;
     float m_transfer_amount_percent = 0;
 
+    int m_fuel_type = 0;
+    const int RegularFuel = 0;
+    const int RCSFuel = 1;
+
     Vessel m_source_vessel = null;
     Part m_source_tank = null;
     Vessel m_dest_vessel = null;
@@ -192,11 +196,17 @@ public class FuelTransferCore
     }
 
     //decide whether a vessel has fueltanks with fuel left in them!
-    bool is_refuel_target (Vessel v)
+    bool is_refuel_target (Vessel v, int fuelType)
 	{
 		foreach (Part p in v.parts) {
-			if (p.GetType() == typeof(FuelTank) && ((FuelTank)p).fuel > 0)
-				return true;
+            if (fuelType == RegularFuel)
+            {
+                if (p.GetType() == typeof(FuelTank) && (p.State == PartStates.ACTIVE || p.State == PartStates.IDLE)) { return true; }
+            }
+            else
+            {
+                if (p.GetType() == typeof(RCSFuelTank) && (p.State == PartStates.ACTIVE || p.State == PartStates.IDLE)) { return true; }
+            }
 		}
 		return false;
     }
@@ -232,6 +242,13 @@ public class FuelTransferCore
         if (m_system_online)
         {
             GUILayout.BeginHorizontal();
+            #region Fuel Type Selection
+            GUILayout.Label ("Select Fuel Type:");
+            String[] fuelTypeStrings = {"Regular Fuel", "RCS Fuel"};
+            m_fuel_type = GUILayout.SelectionGrid(m_fuel_type, fuelTypeStrings, 2, GUI.skin.button);
+            GUILayout.EndHorizontal();
+            #endregion
+            GUILayout.BeginHorizontal();
                 #region Source Column
                 GUILayout.BeginVertical("box");
                     GUILayout.Label("Source");
@@ -257,7 +274,14 @@ public class FuelTransferCore
                     if (m_source_tank != null)
                     {
                         GUI.color = Color.green;
-                        GUILayout.Label(((FuelTank)m_source_tank).fuel.ToString() + "L");
+                        if (m_fuel_type == RegularFuel)
+                        {
+                            GUILayout.Label(((FuelTank)m_source_tank).fuel.ToString() + "L");
+                        }
+                        else
+                        {
+                            GUILayout.Label(((RCSFuelTank)m_source_tank).fuel.ToString() + "L");
+                        }
                     }
                     else
                     {
@@ -282,9 +306,8 @@ public class FuelTransferCore
 
                         // If the distance is less than 2,000m we can now scan for fuel tanks
                         //      TODO: We will want a stage closer than this that will be the ACTUAL refueling range
-                        if (distance < 2000d && is_refuel_target(v))
+                        if (distance < 2000d && is_refuel_target(v, m_fuel_type))
                         {
-                            //GUILayout.Label(v.vesselName + " - is_refuel_target: " + is_refuel_target(v));
                             GUILayout.BeginHorizontal();
                             // If user clicks the select button make this vessel the active target
                             if (GUILayout.Button("+", new GUIStyle(GUI.skin.button)))
@@ -334,8 +357,20 @@ public class FuelTransferCore
                     {
                         foreach (Part p in m_source_vessel.parts)
                         {
-                            if (p.GetType() == typeof(FuelTank) && ((FuelTank)p).fuel > 0.0 && p.State == PartStates.ACTIVE)
-                                m_source_tanks.Add(p);
+                            if (m_fuel_type == RegularFuel)
+                            {
+                                if (p.GetType() == typeof(FuelTank) && ((FuelTank)p).fuel > 0.0 && (p.State == PartStates.ACTIVE || p.State == PartStates.IDLE))
+                                {
+                                    m_source_tanks.Add(p);
+                                }
+                            }
+                            else
+                            {
+                                if (p.GetType() == typeof(RCSFuelTank) && ((RCSFuelTank)p).fuel > 0.0 && (p.State == PartStates.ACTIVE || p.State == PartStates.IDLE))
+                                {
+                                    m_source_tanks.Add(p);
+                                }
+                            }
                         }
                     }
                     foreach (Part p in m_source_tanks)
@@ -345,7 +380,14 @@ public class FuelTransferCore
                         {
                             m_source_tank = p;
                         }
-                        GUILayout.Label(Math.Round(((FuelTank)p).fuel, 1).ToString() + "L");
+                        if (m_fuel_type == RegularFuel)
+                        {
+                            GUILayout.Label(Math.Round(((FuelTank)p).fuel, 1).ToString() + "L");
+                        }
+                        else
+                        {
+                            GUILayout.Label(Math.Round(((RCSFuelTank)p).fuel, 1).ToString() + "L");
+                        }
                         GUILayout.FlexibleSpace();
                         GUILayout.EndHorizontal();
                     }
@@ -382,7 +424,10 @@ public class FuelTransferCore
                 if (m_dest_tank != null)
                 {
                     GUI.color = Color.green;
-                    GUILayout.Label(((FuelTank)m_dest_tank).fuel.ToString() + "L");
+                    if (m_fuel_type == RegularFuel)
+                        GUILayout.Label(((FuelTank)m_dest_tank).fuel.ToString() + "L");
+                    else
+                        GUILayout.Label(((RCSFuelTank)m_dest_tank).fuel.ToString() + "L");
                 }
                 else
                 {
@@ -407,9 +452,8 @@ public class FuelTransferCore
 
                             // If the distance is less than 2,000m we can now scan for fuel tanks
                             // TODO: We will want a stage closer than this that will be the ACTUAL refueling range
-                            if (distance < 2000d && is_refuel_target(v))
+                            if (distance < 2000d && is_refuel_target(v, m_fuel_type))
                             {
-                                //GUILayout.Label(v.vesselName + " - is_refuel_target: " + is_refuel_target(v));
                                 GUILayout.BeginHorizontal();
                                 // If user clicks the select button make this vessel the active target
                                 if (GUILayout.Button("+", new GUIStyle(GUI.skin.button)))
@@ -459,8 +503,16 @@ public class FuelTransferCore
                     {
                         foreach (Part p in m_dest_vessel.parts)
                         {
-                            if (p.GetType() == typeof(FuelTank) && p.State == PartStates.ACTIVE)
-                                m_dest_tanks.Add(p);
+                            if (m_fuel_type == RegularFuel)
+                            {
+                                if (p.GetType() == typeof(FuelTank) && p.State == PartStates.ACTIVE)
+                                    m_dest_tanks.Add(p);
+                            }
+                            else
+                            {
+                                if (p.GetType() == typeof(RCSFuelTank) && p.State != PartStates.DEACTIVATED)
+                                    m_dest_tanks.Add(p);
+                            }
                         }
                     }
                     foreach (Part p in m_dest_tanks)
@@ -470,7 +522,10 @@ public class FuelTransferCore
                         {
                             m_dest_tank = p;
                         }
-                        GUILayout.Label(Math.Round(((FuelTank)p).fuel, 1).ToString() + "L");
+                        if (m_fuel_type == RegularFuel)
+                            GUILayout.Label(Math.Round(((FuelTank)p).fuel, 1).ToString() + "L");
+                        else
+                            GUILayout.Label(Math.Round(((RCSFuelTank)p).fuel, 1).ToString() + "L");
                         GUILayout.FlexibleSpace();
                         GUILayout.EndHorizontal();
                     }
@@ -485,20 +540,37 @@ public class FuelTransferCore
             GUILayout.Label("Transfer Parameters");
             #region Transfer Values
             GUILayout.Label("Amount: " + Math.Round(m_transfer_amount, 2).ToString() + " (" + Math.Round(m_transfer_amount_percent, 2) + "%)");
-            m_transfer_amount_percent = GUILayout.HorizontalSlider(m_transfer_amount_percent, 0, 100);//((FuelTank)m_source_tank).fuel);
+            m_transfer_amount_percent = GUILayout.HorizontalSlider(m_transfer_amount_percent, 0, 100);
             if (m_source_tank != null)
-                m_transfer_amount = ((FuelTank)m_source_tank).fuel * (m_transfer_amount_percent / 100);
+            {
+                if (m_fuel_type == RegularFuel)
+                    m_transfer_amount = ((FuelTank)m_source_tank).fuel * (m_transfer_amount_percent / 100);
+                else
+                    m_transfer_amount = ((RCSFuelTank)m_source_tank).fuel * (m_transfer_amount_percent / 100);
+            }
             else
                 m_transfer_amount = 0;
             GUILayout.Label("Flow Rate: ");
             #endregion
             if (GUILayout.Button("Transfer Now", new GUIStyle(GUI.skin.button)))
             {
-                m_dest_tank.activate();
-                ((FuelTank)m_source_tank).RequestFuel((FuelTank)m_dest_tank, m_transfer_amount, m_dest_tank.uid);
-                ((FuelTank)m_dest_tank).fuel += m_transfer_amount;
-                if (((FuelTank)m_source_tank).fuel == 0f)
-                    m_source_tank.deactivate();
+                m_dest_tank.activate(m_dest_tank.inStageIndex);
+                if (m_fuel_type == RegularFuel)
+                {
+                    ((FuelTank)m_source_tank).RequestFuel((FuelTank)m_dest_tank, m_transfer_amount, m_dest_tank.uid);
+                    ((FuelTank)m_dest_tank).fuel += m_transfer_amount;
+                    if (((FuelTank)m_source_tank).fuel == 0f)
+                        m_source_tank.deactivate();
+                }
+                else
+                {
+                    //((RCSFuelTank)m_source_tank).RequestRCS(m_transfer_amount, m_dest_tank.inStageIndex);
+                    // doesn't work...
+                    ((RCSFuelTank)m_source_tank).fuel -= m_transfer_amount;
+                    ((RCSFuelTank)m_dest_tank).fuel += m_transfer_amount;
+                    if (((RCSFuelTank)m_source_tank).fuel == 0f)
+                        m_source_tank.deactivate();
+                }
             }
             #endregion
         }
@@ -519,7 +591,7 @@ public class FuelTransferCore
 
         if (m_parameters.windowed)
         {
-            float activeHeight = 500;
+            float activeHeight = 525;
             float heightMultiplier = 25;
             float tanksCount;
             if (m_source_tanks.Count > m_dest_tanks.Count)
@@ -527,7 +599,7 @@ public class FuelTransferCore
             else
                 tanksCount = m_dest_tanks.Count;
             activeHeight += tanksCount * heightMultiplier;
-            if (tanksCount > 8)
+            if (tanksCount > 7)
                 activeHeight = 700;
             m_window_pos = GUILayout.Window(WINDOW_ID, m_window_pos, WindowGUI, "Fuel Transfer System", GUILayout.Width(((m_system_online) ? 650 : 250)), GUILayout.Height(((m_system_online) ? activeHeight : 100)));
         }
