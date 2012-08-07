@@ -1,12 +1,12 @@
 Fuel Transfer Module for Kerbal Space Program.
 
-Latest version: 0.1.1
+Latest version: 0.1.2
 
 You can grab a copy of the latest release at:
 http://rachelbrindle.com/ksp/FuelTransferModule.zip
 
-sha1sum: aa7068f3940fc37885420708d8e6a37a0d089d26
-md5sum: a5e29ee572336da28cf91e0b5329b343
+sha1sum: 86dbbd38eb9712e696fa78a26be5ea3b2530f0e1
+md5sum: a9c490c5832401ea07293e53c8811d5a
 
 Currently, you need to be within 2000 meters (2km) of the source/destination vessels (i.e. if you are transfering fuel from some other ship to the currently controlled ship, they need to be within 2km of you).
 This works for both RCS and Regular (rocket and airplane) fuel.
@@ -14,3 +14,14 @@ This works for both RCS and Regular (rocket and airplane) fuel.
 Todo: 
  - Texture work
  - Produces a fuelline from the transfer module to the source/destination tank?
+
+Changelist:
+0.1.2:
+ - Fixed bug where you generate infinite fuel by have the source and destination tanks the same.
+
+0.1.1: 
+ - No longer displays information for vessels > 50km away.
+ - Destination tank must have some amount of fuel in it. (Hopefully we can find a fix, as this is an incredibly annoying workaround for that bug)
+
+0.1:
+ - Initial Release

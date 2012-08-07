@@ -565,12 +565,14 @@ public class FuelTransferCore
                 m_dest_tank.activate(m_dest_tank.inStageIndex);
                 if (m_fuel_type == RegularFuel)
                 {
-                    ((FuelTank)m_source_tank).RequestFuel((FuelTank)m_dest_tank, m_transfer_amount, m_dest_tank.uid);
-                    ((FuelTank)m_dest_tank).fuel += m_transfer_amount;
-                    if (((FuelTank)m_source_tank).fuel <= 0f)
+                    if (((FuelTank)m_source_tank).RequestFuel((FuelTank)m_dest_tank, m_transfer_amount, m_dest_tank.uid))
                     {
-                        m_source_tank.deactivate();
-                        m_source_tank = null;
+                        ((FuelTank)m_dest_tank).fuel += m_transfer_amount;
+                        if (((FuelTank)m_source_tank).fuel <= 0f)
+                        {
+                            m_source_tank.deactivate();
+                            m_source_tank = null;
+                        }
                     }
                 }
                 else
