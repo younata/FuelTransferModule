@@ -1,0 +1,8 @@
+.DS_Store
+
+KSP/Plugins/*
+*dll
+*csproj
+*sou
+*sln
+*cache

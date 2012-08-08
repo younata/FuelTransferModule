@@ -636,14 +636,14 @@ public class FuelTransferCore
                     
                     float fuelBefore = ((FuelTank)m_source_tank).fuel;
                     
-                    print("Dest fuel before: " + ((FuelTank)m_dest_tank).fuel); //debug for checking before/after fuel amounts in the console
-                    print("Transfer amount: " + m_transfer_amount); //debug for checking before/after fuel amounts in the console
+                    //print("Dest fuel before: " + ((FuelTank)m_dest_tank).fuel); //debug for checking before/after fuel amounts in the console
+                    //print("Transfer amount: " + m_transfer_amount); //debug for checking before/after fuel amounts in the console
                     
                     if (((FuelTank)m_source_tank).RequestFuel((FuelTank)m_dest_tank, m_transfer_amount, m_dest_tank.uid))
                     {
                         ((FuelTank)m_dest_tank).fuel += m_transfer_amount;
 
-                        print("Fuel after: " + ((FuelTank)m_dest_tank).fuel); //debug for checking before/after fuel amounts in the console
+                        //print("Fuel after: " + ((FuelTank)m_dest_tank).fuel); //debug for checking before/after fuel amounts in the console
 
                         if (fuelBefore - m_transfer_amount != ((FuelTank)m_source_tank).fuel)
                         {
@@ -658,7 +658,7 @@ public class FuelTransferCore
                     }
                     else
                     {
-                        print("Fuel Transfer Failed!");
+                        //print("Fuel Transfer Failed!");
                         ((FuelTank)m_source_tank).fuel = fuelBefore; //Ensure no fuel is taken unless the transfer actually worked
 
                         if (wasDeactive)
