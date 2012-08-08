@@ -104,7 +104,7 @@ public class FuelTransferModule : Part
     {
         base.onPartAwake();
     }
-
+    
     protected override void onPartFixedUpdate()
     {
         core.onPartFixedUpdate();
@@ -183,6 +183,7 @@ public class FuelTransferCore
     Part m_source_tank = null;
     Vessel m_dest_vessel = null;
     Part m_dest_tank = null;
+    Part m_dest_tank_editor = null; //Stores the editor version of the destination fuel tank, so we can retrieve the max fuel
     #endregion
 
     public FuelTransferCore(Part part)
@@ -201,11 +202,11 @@ public class FuelTransferCore
 		foreach (Part p in v.parts) {
             if (fuelType == RegularFuel)
             {
-                if (p.GetType() == typeof(FuelTank) && (p.State == PartStates.ACTIVE || p.State == PartStates.IDLE)) { return true; }
+                if (p.GetType() == typeof(FuelTank) && p.State != PartStates.DEAD) { return true; }
             }
             else
             {
-                if (p.GetType() == typeof(RCSFuelTank) && (p.State == PartStates.ACTIVE || p.State == PartStates.IDLE)) { return true; }
+                if (p.GetType() == typeof(RCSFuelTank) && p.State != PartStates.DEAD) { return true; }
             }
 		}
 		return false;
@@ -381,21 +382,32 @@ public class FuelTransferCore
                     }
                     foreach (Part p in m_source_tanks)
                     {
-                        GUILayout.BeginHorizontal();
-                        if (GUILayout.Button("+", new GUIStyle(GUI.skin.button)))
+                        if (m_dest_tank == null || p.UID != m_dest_tank.UID) //See the equivalent dest_tanks code for comments
                         {
-                            m_source_tank = p;
+                            GUILayout.BeginHorizontal();
+                            if (GUILayout.Button(new GUIContent("+", p.UID), new GUIStyle(GUI.skin.button)))
+                            {
+                                m_source_tank = p;
+                            }
+                            if (GUI.tooltip == p.UID)
+                            {
+                                p.highlight(Color.green);
+                            }
+                            else
+                            {
+                                p.highlight(Color.black);
+                            }
+                            if (m_fuel_type == RegularFuel)
+                            {
+                                GUILayout.Label(Math.Round(((FuelTank)p).fuel, 1).ToString() + "L");
+                            }
+                            else
+                            {
+                                GUILayout.Label(Math.Round(((RCSFuelTank)p).fuel, 1).ToString() + "L");
+                            }
+                            GUILayout.FlexibleSpace();
+                            GUILayout.EndHorizontal();
                         }
-                        if (m_fuel_type == RegularFuel)
-                        {
-                            GUILayout.Label(Math.Round(((FuelTank)p).fuel, 1).ToString() + "L");
-                        }
-                        else
-                        {
-                            GUILayout.Label(Math.Round(((RCSFuelTank)p).fuel, 1).ToString() + "L");
-                        }
-                        GUILayout.FlexibleSpace();
-                        GUILayout.EndHorizontal();
                     }
 
                     GUI.color = savedColor;
@@ -513,29 +525,52 @@ public class FuelTransferCore
                         {
                             if (m_fuel_type == RegularFuel)
                             {
-                                if (p.GetType() == typeof(FuelTank) && ((FuelTank)p).fuel > 0f && (p.State == PartStates.ACTIVE || p.State == PartStates.IDLE))
+                                if (p.GetType() == typeof(FuelTank) && p.State != PartStates.DEAD)
                                     m_dest_tanks.Add(p);
                             }
                             else
                             {
-                                if (p.GetType() == typeof(RCSFuelTank) && ((RCSFuelTank)p).fuel > 0f && (p.State == PartStates.ACTIVE || p.State == PartStates.IDLE))
+                                if (p.GetType() == typeof(RCSFuelTank) && p.State != PartStates.DEAD)
                                     m_dest_tanks.Add(p);
                             }
                         }
                     }
                     foreach (Part p in m_dest_tanks)
                     {
-                        GUILayout.BeginHorizontal();
-                        if (GUILayout.Button("+", new GUIStyle(GUI.skin.button)))
+                        //This prevents the currently selected source tank from showing up in the dest list
+                        if (m_source_tank == null || m_source_tank.UID != p.UID) //If the source tank is null or the source tank's Unique ID isn't equal to the current potential dest tank, draw the button and info
                         {
-                            m_dest_tank = p;
+                            GUILayout.BeginHorizontal();
+                            if (GUILayout.Button(new GUIContent("+", p.UID), new GUIStyle(GUI.skin.button))) //Add a tooltip to the button, the tooltip won't show up but it allows us to identify what button the mouse is over
+                            {
+                                m_dest_tank = p;
+                                
+                                foreach (AvailablePart editorPart in PartLoader.fetch.loadedPartsList) //Linear search through the loaded parts for the current part's name
+                                {
+                                    if (editorPart.name == p.partInfo.name)
+                                    {
+                                        m_dest_tank_editor = editorPart.partPrefab;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if (GUI.tooltip == p.UID) //Check the current tooltip to see if it matches the current part's unique ID
+                            {
+                                p.highlight(Color.green); //Hightlight the part if so
+                            }
+                            else
+                            {
+                                p.highlight(Color.black); //Remove highlighting if not
+                            }
+
+                            if (m_fuel_type == RegularFuel)
+                                GUILayout.Label(Math.Round(((FuelTank)p).fuel, 1).ToString() + "L");
+                            else
+                                GUILayout.Label(Math.Round(((RCSFuelTank)p).fuel, 1).ToString() + "L");
+                            GUILayout.FlexibleSpace();
+                            GUILayout.EndHorizontal();
                         }
-                        if (m_fuel_type == RegularFuel)
-                            GUILayout.Label(Math.Round(((FuelTank)p).fuel, 1).ToString() + "L");
-                        else
-                            GUILayout.Label(Math.Round(((RCSFuelTank)p).fuel, 1).ToString() + "L");
-                        GUILayout.FlexibleSpace();
-                        GUILayout.EndHorizontal();
                     }
                     GUI.color = savedColor;
                     GUILayout.EndScrollView();
@@ -548,6 +583,32 @@ public class FuelTransferCore
             GUILayout.Label("Transfer Parameters");
             #region Transfer Values
             GUILayout.Label("Amount: " + Math.Round(m_transfer_amount, 2).ToString() + " (" + Math.Round(m_transfer_amount_percent, 2) + "%)");
+
+            float maxTransfer = 0; //Default max amount of fuel to transfer to 0 (in case of null dest_tank)
+            if (m_dest_tank != null)
+            {
+                if (m_fuel_type == RegularFuel)
+                {
+                    maxTransfer = ((FuelTank)m_dest_tank_editor).fuel - ((FuelTank)m_dest_tank).fuel; //Calculate the maximum amount the destination can accept (full-current)
+                }
+                else
+                    maxTransfer = ((RCSFuelTank)m_dest_tank_editor).fuel - ((RCSFuelTank)m_dest_tank).fuel; //Calculate the maximum amount the destination can accept (full-current)
+            }
+
+            if (m_transfer_amount > maxTransfer) m_transfer_amount = maxTransfer; //Limit the transfer amount
+
+            float maxTransferPercent = 100; //Default max transfer percentage to 100% in case of null source_tank
+
+            if (m_source_tank != null && maxTransfer > 0)
+            {
+                maxTransferPercent = (maxTransfer / ((FuelTank)m_source_tank).fuel) * 100f; //Calculate max transfer percentage, maximum/source fuel * 100%
+                if (maxTransferPercent > 100f) maxTransferPercent = 100f; //In the case where the source has less fuel than the maximum transfer amount, limit the percentage to 100%
+            }
+            else if (maxTransfer == 0) maxTransferPercent = 0; //In the case of a null dest_tank limit change the max transfer percent to 0
+
+            if (m_transfer_amount_percent > maxTransferPercent) m_transfer_amount_percent = maxTransferPercent; //limit the transfer percent to the max transfer percent
+            
+
             m_transfer_amount_percent = GUILayout.HorizontalSlider(m_transfer_amount_percent, 0, 100);
             if (m_source_tank != null)
             {
@@ -558,27 +619,66 @@ public class FuelTransferCore
             }
             else
                 m_transfer_amount = 0;
+
             GUILayout.Label("Flow Rate: ");
             #endregion
             if (GUILayout.Button("Transfer Now", new GUIStyle(GUI.skin.button)))
             {
-                m_dest_tank.activate(m_dest_tank.inStageIndex);
+                
                 if (m_fuel_type == RegularFuel)
                 {
+                    bool wasDeactive = false;
+                    if (m_dest_tank.State == PartStates.DEACTIVATED)
+                    {
+                        m_dest_tank.force_activate(); //activate the dest_tank if it is deactive
+                        wasDeactive = true;
+                    }
+                    
+                    float fuelBefore = ((FuelTank)m_source_tank).fuel;
+                    
+                    print("Dest fuel before: " + ((FuelTank)m_dest_tank).fuel); //debug for checking before/after fuel amounts in the console
+                    print("Transfer amount: " + m_transfer_amount); //debug for checking before/after fuel amounts in the console
+                    
                     if (((FuelTank)m_source_tank).RequestFuel((FuelTank)m_dest_tank, m_transfer_amount, m_dest_tank.uid))
                     {
                         ((FuelTank)m_dest_tank).fuel += m_transfer_amount;
+
+                        print("Fuel after: " + ((FuelTank)m_dest_tank).fuel); //debug for checking before/after fuel amounts in the console
+
+                        if (fuelBefore - m_transfer_amount != ((FuelTank)m_source_tank).fuel)
+                        {
+                            ((FuelTank)m_source_tank).fuel = fuelBefore - m_transfer_amount; //If the calculated fuel after and the actual fuel after are different, correct the amount of fuel.
+                        }
+
                         if (((FuelTank)m_source_tank).fuel <= 0f)
                         {
                             m_source_tank.deactivate();
                             m_source_tank = null;
                         }
                     }
+                    else
+                    {
+                        print("Fuel Transfer Failed!");
+                        ((FuelTank)m_source_tank).fuel = fuelBefore; //Ensure no fuel is taken unless the transfer actually worked
+
+                        if (wasDeactive)
+                        {
+                            m_dest_tank.deactivate(); //Re-deactivate any tanks that were deactive before the failed transfer
+                        }
+                        
+                    }
+                    
                 }
                 else
                 {
                     //((RCSFuelTank)m_source_tank).RequestRCS(m_transfer_amount, m_dest_tank.inStageIndex);
                     // doesn't work...
+                    
+                    if (m_dest_tank.State == PartStates.DEACTIVATED)
+                    {
+                        m_dest_tank.force_activate(); //activate the dest_tank if it is deactive
+                    }
+
                     ((RCSFuelTank)m_source_tank).fuel -= m_transfer_amount;
                     ((RCSFuelTank)m_dest_tank).fuel += m_transfer_amount;
                     if (((RCSFuelTank)m_source_tank).fuel <= 0f)

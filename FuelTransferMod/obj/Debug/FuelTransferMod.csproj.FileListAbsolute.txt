@@ -1,2 +1,14 @@
 H:\KSP\KSP_win - FuelTransfer 0.16\Plugins\FuelTransferMod.dll
 H:\KSP\KSP_win - FuelTransfer 0.16\Plugins\FuelTransferMod.pdb
+C:\Users\Tom\Documents\Visual Studio 2010\Projects\FuelTransferModule\trunk\FuelTransferMod\bin\Debug\FuelTransferMod.dll
+C:\Users\Tom\Documents\Visual Studio 2010\Projects\FuelTransferModule\trunk\FuelTransferMod\bin\Debug\FuelTransferMod.pdb
+C:\Users\Tom\Documents\Visual Studio 2010\Projects\FuelTransferModule\trunk\FuelTransferMod\bin\Debug\Assembly-CSharp.dll
+C:\Users\Tom\Documents\Visual Studio 2010\Projects\FuelTransferModule\trunk\FuelTransferMod\bin\Debug\UnityEngine.dll
+C:\Users\Tom\Documents\Visual Studio 2010\Projects\FuelTransferModule\trunk\FuelTransferMod\bin\Debug\Ionic.Zip.dll
+C:\Users\Tom\Documents\Visual Studio 2010\Projects\FuelTransferModule\trunk\FuelTransferMod\bin\Debug\Mono.Cecil.dll
+C:\Users\Tom\Documents\Visual Studio 2010\Projects\FuelTransferModule\trunk\FuelTransferMod\bin\Debug\Assembly-CSharp-firstpass.dll
+C:\Users\Tom\Documents\Visual Studio 2010\Projects\FuelTransferModule\trunk\FuelTransferMod\bin\Debug\Mono.Security.dll
+C:\Users\Tom\Documents\Visual Studio 2010\Projects\FuelTransferModule\trunk\FuelTransferMod\bin\Debug\Assembly-CSharp.xml
+C:\Users\Tom\Documents\Visual Studio 2010\Projects\FuelTransferModule\trunk\FuelTransferMod\obj\Debug\ResolveAssemblyReference.cache
+C:\Users\Tom\Documents\Visual Studio 2010\Projects\FuelTransferModule\trunk\FuelTransferMod\obj\Debug\FuelTransferMod.dll
+C:\Users\Tom\Documents\Visual Studio 2010\Projects\FuelTransferModule\trunk\FuelTransferMod\obj\Debug\FuelTransferMod.pdb
