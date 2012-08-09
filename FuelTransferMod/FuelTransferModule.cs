@@ -531,7 +531,9 @@ public class FuelTransferCore
                             else
                             {
                                 if (p.GetType() == typeof(RCSFuelTank) && p.State != PartStates.DEAD)
+                                {
                                     m_dest_tanks.Add(p);
+                                }
                             }
                         }
                     }
@@ -601,7 +603,11 @@ public class FuelTransferCore
 
             if (m_source_tank != null && maxTransfer > 0)
             {
-                maxTransferPercent = (maxTransfer / ((FuelTank)m_source_tank).fuel) * 100f; //Calculate max transfer percentage, maximum/source fuel * 100%
+                if (m_fuel_type == RegularFuel)
+                    maxTransferPercent = (maxTransfer / ((FuelTank)m_source_tank).fuel) * 100f;
+                else //Calculate max transfer percentage, maximum/source fuel * 100%
+                    maxTransferPercent = (maxTransfer / ((RCSFuelTank)m_source_tank).fuel) * 100f;
+
                 if (maxTransferPercent > 100f) maxTransferPercent = 100f; //In the case where the source has less fuel than the maximum transfer amount, limit the percentage to 100%
             }
             else if (maxTransfer == 0) maxTransferPercent = 0; //In the case of a null dest_tank limit change the max transfer percent to 0
