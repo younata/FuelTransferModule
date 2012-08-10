@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 
+//enum FuelType {Regular=0, RCS};
 
 public struct FuelTransferParameters
 {
@@ -13,6 +14,26 @@ public struct FuelTransferParameters
     public bool windowed;
     public float displayX;
     public float displayY;
+}
+
+interface IFuelSource
+{
+	float fuel;
+	int fuelType; // can be either regular (0) or RCS (1)
+	// We may add more in the future if we can dynamically figure out what other mods are available.
+	// I think it'd be awesome to support more than just these two fuel types.
+	bool RequestFuel(float amount);
+	// First checks that we can grab the fuel we want, and if so, removes the fuel from the tank.
+	// Despite the fact that we do check if your part is not dead, and that it has sufficient fuel,
+	// you should also check that we didn't mess up.
+	// The simplest implementation for this would do:
+    /*
+	if ((this.States == PartStates.DEAD) && (this.fuel - amount) <= 0)
+		return false;
+	this.fuel -= amount;
+	return true;
+	*/
+	// If your part does anything special, you may want to implement this differently.
 }
 
 public class FuelTransferPod : CommandPod
