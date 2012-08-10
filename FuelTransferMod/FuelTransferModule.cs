@@ -4,8 +4,6 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 
-//enum FuelType {Regular=0, RCS};
-
 public struct FuelTransferParameters
 {
     public String basePlanet;
@@ -16,10 +14,12 @@ public struct FuelTransferParameters
     public float displayY;
 }
 
+//enum FuelType {Regular=0, RCS};
+
 interface IFuelSource
 {
-	float fuel;
-	int fuelType; // can be either regular (0) or RCS (1)
+	float fuel { get; set; }
+	int fuelType { get; set; } // can be either regular (0) or RCS (1)
 	// We may add more in the future if we can dynamically figure out what other mods are available.
 	// I think it'd be awesome to support more than just these two fuel types.
 	bool RequestFuel(float amount);
@@ -221,13 +221,22 @@ public class FuelTransferCore
     bool is_refuel_target (Vessel v, int fuelType)
 	{
 		foreach (Part p in v.parts) {
+			if (p.State == PartStates.DEAD)
+				continue;
+			if (p is IFuelSource) {
+				if (((IFuelSource)p).fuelType == fuelType) {
+					return true;
+				} else {
+					continue;
+				}
+			}
             if (fuelType == RegularFuel)
             {
-                if (p.GetType() == typeof(FuelTank) && p.State != PartStates.DEAD) { return true; }
+                if (p.GetType() == typeof(FuelTank)) { return true; }
             }
-            else
+            else if (fuelType == RCSFuel)
             {
-                if (p.GetType() == typeof(RCSFuelTank) && p.State != PartStates.DEAD) { return true; }
+                if (p.GetType() == typeof(RCSFuelTank)) { return true; }
             }
 		}
 		return false;
@@ -308,7 +317,7 @@ public class FuelTransferCore
                         {
                             GUILayout.Label(((FuelTank)m_source_tank).fuel.ToString() + "L");
                         }
-                        else
+                        else if (m_fuel_type == RCSFuel)
                         {
                             GUILayout.Label(((RCSFuelTank)m_source_tank).fuel.ToString() + "L");
                         }
@@ -394,7 +403,7 @@ public class FuelTransferCore
                                 if (p.GetType() == typeof(FuelTank) && ((FuelTank)p).fuel > 0.0 && (p.State == PartStates.ACTIVE || p.State == PartStates.IDLE))
                                     m_source_tanks.Add(p);
                             }
-                            else
+                            else if (m_fuel_type == RCSFuel)
                             {
                                 if (p.GetType() == typeof(RCSFuelTank) && ((RCSFuelTank)p).fuel > 0.0 && (p.State == PartStates.ACTIVE || p.State == PartStates.IDLE))
                                     m_source_tanks.Add(p);
@@ -422,7 +431,7 @@ public class FuelTransferCore
                             {
                                 GUILayout.Label(Math.Round(((FuelTank)p).fuel, 1).ToString() + "L");
                             }
-                            else
+                            else if (m_fuel_type == RCSFuel)
                             {
                                 GUILayout.Label(Math.Round(((RCSFuelTank)p).fuel, 1).ToString() + "L");
                             }
@@ -465,7 +474,7 @@ public class FuelTransferCore
                     GUI.color = Color.green;
                     if (m_fuel_type == RegularFuel)
                         GUILayout.Label(((FuelTank)m_dest_tank).fuel.ToString() + "L");
-                    else
+                    else if (m_fuel_type == RCSFuel)
                         GUILayout.Label(((RCSFuelTank)m_dest_tank).fuel.ToString() + "L");
                 }
                 else
@@ -549,7 +558,7 @@ public class FuelTransferCore
                                 if (p.GetType() == typeof(FuelTank) && p.State != PartStates.DEAD)
                                     m_dest_tanks.Add(p);
                             }
-                            else
+                            else if (m_fuel_type == RCSFuel)
                             {
                                 if (p.GetType() == typeof(RCSFuelTank) && p.State != PartStates.DEAD)
                                 {
@@ -589,7 +598,7 @@ public class FuelTransferCore
 
                             if (m_fuel_type == RegularFuel)
                                 GUILayout.Label(Math.Round(((FuelTank)p).fuel, 1).ToString() + "L");
-                            else
+                            else if (m_fuel_type == RCSFuel)
                                 GUILayout.Label(Math.Round(((RCSFuelTank)p).fuel, 1).ToString() + "L");
                             GUILayout.FlexibleSpace();
                             GUILayout.EndHorizontal();
@@ -614,7 +623,7 @@ public class FuelTransferCore
                 {
                     maxTransfer = ((FuelTank)m_dest_tank_editor).fuel - ((FuelTank)m_dest_tank).fuel; //Calculate the maximum amount the destination can accept (full-current)
                 }
-                else
+                else if (m_fuel_type == RCSFuel)
                     maxTransfer = ((RCSFuelTank)m_dest_tank_editor).fuel - ((RCSFuelTank)m_dest_tank).fuel; //Calculate the maximum amount the destination can accept (full-current)
             }
 
@@ -626,7 +635,7 @@ public class FuelTransferCore
             {
                 if (m_fuel_type == RegularFuel)
                     maxTransferPercent = (maxTransfer / ((FuelTank)m_source_tank).fuel) * 100f;
-                else //Calculate max transfer percentage, maximum/source fuel * 100%
+                else if (m_fuel_type == RCSFuel) //Calculate max transfer percentage, maximum/source fuel * 100%
                     maxTransferPercent = (maxTransfer / ((RCSFuelTank)m_source_tank).fuel) * 100f;
 
                 if (maxTransferPercent > 100f) maxTransferPercent = 100f; //In the case where the source has less fuel than the maximum transfer amount, limit the percentage to 100%
@@ -641,7 +650,7 @@ public class FuelTransferCore
             {
                 if (m_fuel_type == RegularFuel)
                     m_transfer_amount = ((FuelTank)m_source_tank).fuel * (m_transfer_amount_percent / 100);
-                else
+                else if (m_fuel_type == RCSFuel)
                     m_transfer_amount = ((RCSFuelTank)m_source_tank).fuel * (m_transfer_amount_percent / 100);
             }
             else
@@ -696,7 +705,7 @@ public class FuelTransferCore
                     }
                     
                 }
-                else
+                else if (m_fuel_type == RCSFuel)
                 {
                     //((RCSFuelTank)m_source_tank).RequestRCS(m_transfer_amount, m_dest_tank.inStageIndex);
                     // doesn't work...
