@@ -18,22 +18,22 @@ public struct FuelTransferParameters
 
 interface IFuelSource
 {
-	float fuel { get; set; }
-	int fuelType { get; set; } // can be either regular (0) or RCS (1)
-	// We may add more in the future if we can dynamically figure out what other mods are available.
-	// I think it'd be awesome to support more than just these two fuel types.
-	bool RequestFuel(float amount, int fuelType);
-	// First checks that we can grab the fuel we want, and if so, removes the fuel from the tank.
-	// Despite the fact that we do check if your part is not dead, and that it has sufficient fuel,
-	// you should also check that we didn't mess up.
-	// The simplest implementation for this would do:
+    float fuel { get; set; }
+    int fuelType { get; set; } // can be either regular (0) or RCS (1)
+    // We may add more in the future if we can dynamically figure out what other mods are available.
+    // I think it'd be awesome to support more than just these two fuel types.
+    bool RequestFuel(float amount, int fuelType);
+    // First checks that we can grab the fuel we want, and if so, removes the fuel from the tank.
+    // Despite the fact that we do check if your part is not dead, and that it has sufficient fuel,
+    // you should also check that we didn't mess up.
+    // The simplest implementation for this would do:
     /*
-	if ((this.States == PartStates.DEAD) || (this.fuel - amount) <= 0 || (this.fuelType != fuelType)
-		return false;
-	this.fuel -= amount;
-	return true;
-	*/
-	// If your part does anything special, you may want to implement this differently.
+    if ((this.States == PartStates.DEAD) || (this.fuel - amount) <= 0 || (this.fuelType != fuelType)
+        return false;
+    this.fuel -= amount;
+    return true;
+    */
+    // If your part does anything special, you may want to implement this differently.
 }
 
 public class FuelTransferPod : CommandPod
@@ -219,17 +219,17 @@ public class FuelTransferCore
 
     //decide whether a vessel has fueltanks with fuel left in them!
     bool is_refuel_target (Vessel v, int fuelType)
-	{
-		foreach (Part p in v.parts) {
-			if (p.State == PartStates.DEAD)
-				continue;
-			if (p is IFuelSource) {
-				if (((IFuelSource)p).fuelType == fuelType) {
-					return true;
-				} else {
-					continue;
-				}
-			}
+    {
+        foreach (Part p in v.parts) {
+            if (p.State == PartStates.DEAD)
+                continue;
+            if (p is IFuelSource) {
+                if (((IFuelSource)p).fuelType == fuelType) {
+                    return true;
+                } else {
+                    continue;
+                }
+            }
             if (fuelType == RegularFuel)
             {
                 if (p.GetType() == typeof(FuelTank)) { return true; }
@@ -238,27 +238,27 @@ public class FuelTransferCore
             {
                 if (p.GetType() == typeof(RCSFuelTank)) { return true; }
             }
-		}
-		return false;
+        }
+        return false;
     }
 
-	float getFuelForPartAndFueltype (Part p, int fuelType)
-	{
-		if (p is IFuelSource) {
-			IFuelSource ifs = (IFuelSource)p;
-			if (ifs.fuelType != fuelType)
-				return -1;
-			return ifs.fuel;
-		}
-		if (fuelType == RegularFuel) {
-			if (p.GetType () == typeof(FuelTank))
-				return ((FuelTank)p).fuel;
-		} else if (fuelType == RegularFuel) {
-			if (p.GetType () == typeof(RCSFuelTank))
-				return ((RCSFuelTank)p).fuel;
-		}
-		return -1;
-	}
+    float getFuelForPartAndFueltype (Part p, int fuelType)
+    {
+        if (p is IFuelSource) {
+            IFuelSource ifs = (IFuelSource)p;
+            if (ifs.fuelType != fuelType)
+                return -1;
+            return ifs.fuel;
+        }
+        if (fuelType == RegularFuel) {
+            if (p.GetType () == typeof(FuelTank))
+                return ((FuelTank)p).fuel;
+        } else if (fuelType == RegularFuel) {
+            if (p.GetType () == typeof(RCSFuelTank))
+                return ((RCSFuelTank)p).fuel;
+        }
+        return -1;
+    }
 
     private void addFuel(Part dest, float amount, int fuelType)
     {
@@ -285,52 +285,52 @@ public class FuelTransferCore
         }
         float fuelBefore = getFuelForPartAndFueltype(source, FuelType);
 
-		bool deactivated = false;
+        bool deactivated = false;
 
         if (source is IFuelSource) {
             IFuelSource ifs = (IFuelSource)source;
             if (ifs.fuelType == FuelType && ifs.RequestFuel(amount, FuelType)) {
-				addFuel(dest, amount, FuelType);
-				if (fuelBefore - amount != getFuelForPartAndFueltype(source, FuelType)) {
-					addFuel(source, fuelBefore - amount, FuelType);
-				}
+                addFuel(dest, amount, FuelType);
+                if (fuelBefore - amount != getFuelForPartAndFueltype(source, FuelType)) {
+                    addFuel(source, fuelBefore - amount, FuelType);
+                }
             }
-			if (ifs.fuel <= 0.0) {
-				source.deactivate();
-				deactivated = true;
-			}
+            if (ifs.fuel <= 0.0) {
+                source.deactivate();
+                deactivated = true;
+            }
         } else {
-			if (FuelType == RegularFuel && source.GetType() == typeof(FuelTank)) {
-				FuelTank ft = (FuelTank)source;
-				if (ft.RequestFuel (dest, amount, dest.uid)) {
-					addFuel(dest, amount, FuelType);
-					if (fuelBefore - amount != getFuelForPartAndFueltype(source, FuelType)) {
-						addFuel(source, fuelBefore - amount, FuelType);
-					}
-				} else {
-					ft.fuel = fuelBefore;
-				}
-				if (ft.fuel <= 0.0) {
-					ft.deactivate();
-					deactivated = true;
-				}
-			} else if (FuelType == RCSFuel && source.GetType() == typeof(RCSFuelTank)) {
-				RCSFuelTank ft = (RCSFuelTank)source;
-				ft.fuel -= amount;
-				addFuel(dest, amount, FuelType);
-				if (fuelBefore - amount != getFuelForPartAndFueltype(source, FuelType)) {
-					addFuel(source, fuelBefore - amount, FuelType);
-				}
-				if (ft.fuel <= 0.0) {
-					ft.deactivate();
-					deactivated = true;
-				}
-			}
+            if (FuelType == RegularFuel && source.GetType() == typeof(FuelTank)) {
+                FuelTank ft = (FuelTank)source;
+                if (ft.RequestFuel (dest, amount, dest.uid)) {
+                    addFuel(dest, amount, FuelType);
+                    if (fuelBefore - amount != getFuelForPartAndFueltype(source, FuelType)) {
+                        addFuel(source, fuelBefore - amount, FuelType);
+                    }
+                } else {
+                    ft.fuel = fuelBefore;
+                }
+                if (ft.fuel <= 0.0) {
+                    ft.deactivate();
+                    deactivated = true;
+                }
+            } else if (FuelType == RCSFuel && source.GetType() == typeof(RCSFuelTank)) {
+                RCSFuelTank ft = (RCSFuelTank)source;
+                ft.fuel -= amount;
+                addFuel(dest, amount, FuelType);
+                if (fuelBefore - amount != getFuelForPartAndFueltype(source, FuelType)) {
+                    addFuel(source, fuelBefore - amount, FuelType);
+                }
+                if (ft.fuel <= 0.0) {
+                    ft.deactivate();
+                    deactivated = true;
+                }
+            }
         }
 
-		if (wasDeactive)
-			source.deactivate();
-		return deactivated;
+        if (wasDeactive)
+            source.deactivate();
+        return deactivated;
     }
 
     double distanceBetweenVessels (Vessel a, Vessel b)
@@ -404,11 +404,11 @@ public class FuelTransferCore
                     if (m_source_tank != null)
                     {
                         GUI.color = Color.green;
-						float f = getFuelForPartAndFueltype(m_source_tank, m_fuel_type); // returns -1 on error
-						if (f != -1)
-							GUILayout.Label(f.ToString() + "L");
-						else
-							GUILayout.Label("Invalid Tank Selected");
+                        float f = getFuelForPartAndFueltype(m_source_tank, m_fuel_type); // returns -1 on error
+                        if (f != -1)
+                            GUILayout.Label(f.ToString() + "L");
+                        else
+                            GUILayout.Label("Invalid Tank Selected");
                     }
                     else
                     {
@@ -486,11 +486,11 @@ public class FuelTransferCore
                     {
                         foreach (Part p in m_source_vessel.parts)
                         {
-							if (p.State == PartStates.ACTIVE || p.State == PartStates.IDLE) {
-								float f = getFuelForPartAndFueltype(p, m_fuel_type);
-								if (f > 0.0)
-									m_source_tanks.Add(p);
-							}
+                            if (p.State == PartStates.ACTIVE || p.State == PartStates.IDLE) {
+                                float f = getFuelForPartAndFueltype(p, m_fuel_type);
+                                if (f > 0.0)
+                                    m_source_tanks.Add(p);
+                            }
                         }
                     }
                     foreach (Part p in m_source_tanks)
@@ -510,8 +510,8 @@ public class FuelTransferCore
                             {
                                 p.highlight(Color.black);
                             }
-							float f = getFuelForPartAndFueltype(p, m_fuel_type);
-							GUILayout.Label(Math.Round(f, 1).ToString() + "L");
+                            float f = getFuelForPartAndFueltype(p, m_fuel_type);
+                            GUILayout.Label(Math.Round(f, 1).ToString() + "L");
                             GUILayout.FlexibleSpace();
                             GUILayout.EndHorizontal();
                         }
@@ -549,11 +549,11 @@ public class FuelTransferCore
                 if (m_dest_tank != null)
                 {
                     GUI.color = Color.green;
-					float f = getFuelForPartAndFueltype(m_dest_tank, m_fuel_type);
-					if (f != -1)
-                    	GUILayout.Label(f.ToString() + "L");
-					else
-						GUILayout.Label("Invalid Tank Selected");
+                    float f = getFuelForPartAndFueltype(m_dest_tank, m_fuel_type);
+                    if (f != -1)
+                        GUILayout.Label(f.ToString() + "L");
+                    else
+                        GUILayout.Label("Invalid Tank Selected");
                 }
                 else
                 {
@@ -631,11 +631,11 @@ public class FuelTransferCore
                     {
                         foreach (Part p in m_dest_vessel.parts)
                         {
-							if (p.State == PartStates.DEAD)
-								continue;
-							float f = getFuelForPartAndFueltype(p, m_fuel_type);
-							if (f != -1)
-								m_dest_tanks.Add(p);
+                            if (p.State == PartStates.DEAD)
+                                continue;
+                            float f = getFuelForPartAndFueltype(p, m_fuel_type);
+                            if (f != -1)
+                                m_dest_tanks.Add(p);
                         }
                     }
                     foreach (Part p in m_dest_tanks)
@@ -667,8 +667,8 @@ public class FuelTransferCore
                                 p.highlight(Color.black); //Remove highlighting if not
                             }
 
-							float f = getFuelForPartAndFueltype(p, m_fuel_type);
-							if (f != -1)
+                            float f = getFuelForPartAndFueltype(p, m_fuel_type);
+                            if (f != -1)
                                 GUILayout.Label(Math.Round(f, 1).ToString() + "L");
                             else
                                 GUILayout.Label("Invalid Tank Selected");
@@ -691,11 +691,11 @@ public class FuelTransferCore
             float maxTransfer = 0; //Default max amount of fuel to transfer to 0 (in case of null dest_tank)
             if (m_dest_tank != null)
             {
-				float f1 = getFuelForPartAndFueltype(m_dest_tank_editor, m_fuel_type);
-				float f2 = getFuelForPartAndFueltype(m_dest_tank, m_fuel_type);
-				if (f1 != -1 && f2 != -2)
-					maxTransfer = f1 - f2; //Calculate the maximum amount the destination can accept (full-current)
-			}
+                float f1 = getFuelForPartAndFueltype(m_dest_tank_editor, m_fuel_type);
+                float f2 = getFuelForPartAndFueltype(m_dest_tank, m_fuel_type);
+                if (f1 != -1 && f2 != -2)
+                    maxTransfer = f1 - f2; //Calculate the maximum amount the destination can accept (full-current)
+            }
 
             if (m_transfer_amount > maxTransfer) m_transfer_amount = maxTransfer; //Limit the transfer amount
 
@@ -703,9 +703,9 @@ public class FuelTransferCore
 
             if (m_source_tank != null && maxTransfer > 0)
             {
-				float f = getFuelForPartAndFueltype(m_source_tank, m_fuel_type);
-				if (f != -1)
-                	maxTransferPercent = (maxTransfer / f) * 100f;
+                float f = getFuelForPartAndFueltype(m_source_tank, m_fuel_type);
+                if (f != -1)
+                    maxTransferPercent = (maxTransfer / f) * 100f;
 
                 if (maxTransferPercent > 100f) maxTransferPercent = 100f; //In the case where the source has less fuel than the maximum transfer amount, limit the percentage to 100%
             }
@@ -717,11 +717,11 @@ public class FuelTransferCore
             m_transfer_amount_percent = GUILayout.HorizontalSlider(m_transfer_amount_percent, 0, 100);
             if (m_source_tank != null)
             {
-				float f = getFuelForPartAndFueltype(m_source_tank, m_fuel_type);
-				if (f != -1)
+                float f = getFuelForPartAndFueltype(m_source_tank, m_fuel_type);
+                if (f != -1)
                     m_transfer_amount = f * (m_transfer_amount_percent / 100);
-				else
-					m_transfer_amount = 0;
+                else
+                    m_transfer_amount = 0;
             }
             else
                 m_transfer_amount = 0;
@@ -731,7 +731,7 @@ public class FuelTransferCore
             if (GUILayout.Button("Transfer Now", new GUIStyle(GUI.skin.button)))
             {
                 if (transferFuel(m_source_tank, m_dest_tank, m_transfer_amount, m_fuel_type)) // returns whether or not the source tank was deactivated.
-					m_source_tank = null;
+                    m_source_tank = null;
             }
             #endregion
         }
