@@ -261,7 +261,10 @@ public class FuelTransferCore
     }
 
     private void addFuel(Part dest, float amount, int fuelType)
-    {
+    {/*
+        if (dest == null)
+            return;
+*/
         if (dest is IFuelSource) {
             ((IFuelSource)dest).fuel += amount;
         }
@@ -276,7 +279,7 @@ public class FuelTransferCore
         }
     }
 
-    bool transferFuel(Part source, Part dest, float amount, int FuelType)
+    bool transferFuel (Part source, Part dest, float amount, int FuelType)
     {
         bool wasDeactive = false;
         if (dest.State == PartStates.DEACTIVATED) {
@@ -291,9 +294,11 @@ public class FuelTransferCore
             IFuelSource ifs = (IFuelSource)source;
             if (ifs.fuelType == FuelType && ifs.RequestFuel(amount, FuelType)) {
                 addFuel(dest, amount, FuelType);
+                /*
                 if (fuelBefore - amount != getFuelForPartAndFueltype(source, FuelType)) {
                     addFuel(source, fuelBefore - amount, FuelType);
                 }
+                */
             }
             if (ifs.fuel <= 0.0) {
                 source.deactivate();
@@ -304,9 +309,11 @@ public class FuelTransferCore
                 FuelTank ft = (FuelTank)source;
                 if (ft.RequestFuel (dest, amount, dest.uid)) {
                     addFuel(dest, amount, FuelType);
+                    /*
                     if (fuelBefore - amount != getFuelForPartAndFueltype(source, FuelType)) {
                         addFuel(source, fuelBefore - amount, FuelType);
                     }
+                    */
                 } else {
                     ft.fuel = fuelBefore;
                 }
@@ -318,9 +325,11 @@ public class FuelTransferCore
                 RCSFuelTank ft = (RCSFuelTank)source;
                 ft.fuel -= amount;
                 addFuel(dest, amount, FuelType);
+                /*
                 if (fuelBefore - amount != getFuelForPartAndFueltype(source, FuelType)) {
                     addFuel(source, fuelBefore - amount, FuelType);
                 }
+                */
                 if (ft.fuel <= 0.0) {
                     ft.deactivate();
                     deactivated = true;
