@@ -253,7 +253,7 @@ public class FuelTransferCore
         if (fuelType == RegularFuel) {
             if (p.GetType () == typeof(FuelTank))
                 return ((FuelTank)p).fuel;
-        } else if (fuelType == RegularFuel) {
+        } else if (fuelType == RCSFuel) {
             if (p.GetType () == typeof(RCSFuelTank))
                 return ((RCSFuelTank)p).fuel;
         }
