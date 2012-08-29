@@ -14,21 +14,19 @@ public struct FuelTransferParameters
     public float displayY;
 }
 
-//enum FuelType {Regular=0, RCS};
-
 interface IFuelSource
 {
-    float fuel { get; set; }
-    int fuelType { get; set; } // can be either regular (0) or RCS (1)
+    float Fuel { get; set; }
+    String FuelType { get; } // Name your fuel source!
     // We may add more in the future if we can dynamically figure out what other mods are available.
     // I think it'd be awesome to support more than just these two fuel types.
-    bool RequestFuel(float amount, int fuelType);
+    bool RequestFuel(float amount, String fuelType);
     // First checks that we can grab the fuel we want, and if so, removes the fuel from the tank.
     // Despite the fact that we do check if your part is not dead, and that it has sufficient fuel,
     // you should also check that we didn't mess up.
     // The simplest implementation for this would do:
     /*
-    if ((this.States == PartStates.DEAD) || (this.fuel - amount) <= 0 || (this.fuelType != fuelType)
+    if ((this.States == PartStates.DEAD) || (this.Fuel.get() - amount) <= 0 || (this.FuelType.get().Equals(fuelType)))
         return false;
     this.fuel -= amount;
     return true;
@@ -196,6 +194,8 @@ public class FuelTransferCore
     float m_transfer_amount = 0;
     float m_transfer_amount_percent = 0;
 
+	List<String> fts; // FuelTypeStrings
+
     int m_fuel_type = 0;
     const int RegularFuel = 0;
     const int RCSFuel = 1;
@@ -216,6 +216,21 @@ public class FuelTransferCore
     {
         this.m_parameters = parameters;
     }
+
+	List<String> otherFuelParts ()
+	{
+		List<String> ret = new List<String> ();
+		foreach (Vessel v in FlightGlobals.Vessels) {
+			foreach (Part p in v.parts) {
+				if (p is IFuelSource) {
+					IFuelSource ifs = (IFuelSource)p;
+					if (!ret.Contains(ifs.GetType())) {
+						ret.Add (ifs.GetType());
+					}
+				}
+			}
+		}
+	}
 
     //decide whether a vessel has fueltanks with fuel left in them!
     bool is_refuel_target (Vessel v, int fuelType)
@@ -375,9 +390,9 @@ public class FuelTransferCore
             GUILayout.BeginHorizontal();
             #region Fuel Type Selection
             GUILayout.Label ("Select Fuel Type:");
-            String[] fuelTypeStrings = {"Regular Fuel", "RCS Fuel"};
+            String[] fuelTypeStrings = fts.ToArray();
             int foo;
-            if ((foo = GUILayout.SelectionGrid(m_fuel_type, fuelTypeStrings, 2, GUI.skin.button)) != m_fuel_type)
+            if ((foo = GUILayout.SelectionGrid(m_fuel_type, fuelTypeStrings, fuelTypeStrings.GetLength(0), GUI.skin.button)) != m_fuel_type)
             {
                 m_dest_tank = null;
                 m_dest_vessel = null;
@@ -761,6 +776,10 @@ public class FuelTransferCore
 
         if (m_parameters.windowed)
         {
+			List<String> fts = otherFuelParts();
+			fts.Insert(0, "RCS Fuel");
+			fts.Insert(0, "Regular Fuel");
+            
             float activeHeight = 550;
             float heightMultiplier = 25;
             float tanksCount;
