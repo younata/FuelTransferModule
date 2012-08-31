@@ -18,8 +18,6 @@ interface IFuelSource
 {
     float Fuel { get; set; }
     String FuelType { get; } // Name your fuel source!
-    // We may add more in the future if we can dynamically figure out what other mods are available.
-    // I think it'd be awesome to support more than just these two fuel types.
     bool RequestFuel(float amount, String fuelType);
     // First checks that we can grab the fuel we want, and if so, removes the fuel from the tank.
     // Despite the fact that we do check if your part is not dead, and that it has sufficient fuel,
@@ -224,12 +222,13 @@ public class FuelTransferCore
 			foreach (Part p in v.parts) {
 				if (p is IFuelSource) {
 					IFuelSource ifs = (IFuelSource)p;
-					if (!ret.Contains(ifs.GetType())) {
-						ret.Add (ifs.GetType());
+					if (!ret.Contains(ifs.FuelType)) {
+						ret.Add (ifs.FuelType);
 					}
 				}
 			}
 		}
+		return ret;
 	}
 
     //decide whether a vessel has fueltanks with fuel left in them!
@@ -239,7 +238,7 @@ public class FuelTransferCore
             if (p.State == PartStates.DEAD)
                 continue;
             if (p is IFuelSource) {
-                if (((IFuelSource)p).fuelType == fuelType) {
+                if (((IFuelSource)p).FuelType.Equals(fts.ElementAt(fuelType))) {
                     return true;
                 } else {
                     continue;
@@ -261,9 +260,9 @@ public class FuelTransferCore
     {
         if (p is IFuelSource) {
             IFuelSource ifs = (IFuelSource)p;
-            if (ifs.fuelType != fuelType)
+            if (!ifs.FuelType.Equals(fts.ElementAt(fuelType)))
                 return -1;
-            return ifs.fuel;
+            return ifs.Fuel;
         }
         if (fuelType == RegularFuel) {
             if (p.GetType () == typeof(FuelTank))
@@ -281,7 +280,7 @@ public class FuelTransferCore
             return;
 */
         if (dest is IFuelSource) {
-            ((IFuelSource)dest).fuel += amount;
+            ((IFuelSource)dest).Fuel += amount;
         }
         if (fuelType == RegularFuel) {
             if (dest.GetType() == typeof(FuelTank)) {
@@ -307,7 +306,7 @@ public class FuelTransferCore
 
         if (source is IFuelSource) {
             IFuelSource ifs = (IFuelSource)source;
-            if (ifs.fuelType == FuelType && ifs.RequestFuel(amount, FuelType)) {
+            if (ifs.FuelType.Equals(fts.ElementAt(FuelType)) && ifs.RequestFuel(amount, fts.ElementAt(FuelType))) {
                 addFuel(dest, amount, FuelType);
                 /*
                 if (fuelBefore - amount != getFuelForPartAndFueltype(source, FuelType)) {
@@ -315,7 +314,7 @@ public class FuelTransferCore
                 }
                 */
             }
-            if (ifs.fuel <= 0.0) {
+            if (ifs.Fuel <= 0.0) {
                 source.deactivate();
                 deactivated = true;
             }
@@ -776,7 +775,7 @@ public class FuelTransferCore
 
         if (m_parameters.windowed)
         {
-			List<String> fts = otherFuelParts();
+			fts = otherFuelParts();
 			fts.Insert(0, "RCS Fuel");
 			fts.Insert(0, "Regular Fuel");
             
