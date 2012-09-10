@@ -321,16 +321,8 @@ public class FuelTransferCore
         } else {
             if (FuelType == RegularFuel && source.GetType() == typeof(FuelTank)) {
                 FuelTank ft = (FuelTank)source;
-                if (ft.RequestFuel (dest, amount, dest.uid)) {
-                    addFuel(dest, amount, FuelType);
-                    /*
-                    if (fuelBefore - amount != getFuelForPartAndFueltype(source, FuelType)) {
-                        addFuel(source, fuelBefore - amount, FuelType);
-                    }
-                    */
-                } else {
-                    ft.fuel = fuelBefore;
-                }
+                ft.fuel -= amount;
+                addFuel(dest, amount, FuelType);
                 if (ft.fuel <= 0.0) {
                     ft.deactivate();
                     deactivated = true;
@@ -447,8 +439,8 @@ public class FuelTransferCore
                 // Draw all the vessels in the list vessels scroll view
                 foreach (Vessel v in FlightGlobals.Vessels)
                 {
-                    if (!v.vesselName.ToLower().Contains("debris") && v.isCommandable && v != null)
-                    {   // We want to make sure that this vessel is not debris and is a legitimate command pod
+                    if (v != null)
+                    {
 
                         // This calculate the distance from the current vessel (v) to ourselves
                         //      Rounded to 2 decimal places
@@ -591,10 +583,8 @@ public class FuelTransferCore
                     // Draw all the vessels in the list vessels scroll view
                     foreach (Vessel v in FlightGlobals.Vessels)
                     {
-                        if (!v.vesselName.ToLower().Contains("debris") && v.isCommandable && v != null)
-                        { /* Don't care about whether or not it's debris, or even if it has a command pod.
-                             Only care if it has a fuel tank on it.
-                            */
+                        if (v != null)
+                        {
                             // This calculate the distance from the current vessel (v) to ourselves
                             //      Rounded to 2 decimal places
                             double distance = distanceBetweenVessels(v, m_part.vessel);
