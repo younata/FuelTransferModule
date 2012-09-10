@@ -473,13 +473,13 @@ public class FuelTransferCore
                             GUILayout.FlexibleSpace();
                             GUILayout.EndHorizontal();
                         }
+                    /*
                         else if (distance <= PROXIMITY_DISTANCE)
                         {   // This is for a "medium" contact range. Nearby Vessels. Set large for testing
                             GUI.color = Color.yellow;
                             GUILayout.Label(String.Format(v.vesselName + " - " + string.Format("{0:#,###0}", distance) + "m"));
                             GUI.color = savedColor;
                         }
-                    /*
                         else
                         {   // All other vessels. Greater than PROXIMITY_DISTANCE
                             GUILayout.Label(String.Format(v.vesselName + " - " + string.Format("{0:#,###0}", distance) + "m"));
@@ -615,14 +615,13 @@ public class FuelTransferCore
                                 GUI.color = savedColor;
                                 GUILayout.FlexibleSpace();
                                 GUILayout.EndHorizontal();
-                            }
+                            }/*
                             else if (distance <= PROXIMITY_DISTANCE)
                             {   // This is for a "medium" contact range. Nearby Vessels. Set large for testing
                                 GUI.color = Color.yellow;
                                 GUILayout.Label(String.Format(v.vesselName + " - " + string.Format("{0:#,###0}", distance) + "m"));
                                 GUI.color = savedColor;
                             }
-                    /*
                             else
                             {   // All other vessels. Greater than PROXIMITY_DISTANCE
                                 GUILayout.Label(String.Format(v.vesselName + " - " + string.Format("{0:#,###0}", distance) + "m"));
