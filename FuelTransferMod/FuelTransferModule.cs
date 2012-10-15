@@ -77,6 +77,18 @@ public class FuelTransferPod : CommandPod
         base.onFlightStart();
     }
 
+    protected override void onGamePause ()
+    {
+        core.onGamePause ();
+        base.onGamePause ();
+    }
+    
+    protected override void onGameResume ()
+    {
+        core.onGameResume ();
+        base.onGameResume ();
+    }
+
     protected override void onPartDestroy()
     {
         core.onPartDestroy();
@@ -141,6 +153,18 @@ public class FuelTransferModule : Part
         core.applyParameters(parameters);
         core.onFlightStart();
         base.onFlightStart();
+    }
+
+    protected override void onGamePause ()
+    {
+        core.onGamePause ();
+        base.onGamePause ();
+    }
+
+    protected override void onGameResume ()
+    {
+        core.onGameResume ();
+        base.onGameResume ();
     }
 
     protected override void onPartDestroy()
@@ -793,6 +817,17 @@ public class FuelTransferCore
     }
 
     public void onFlightStart()
+    {
+        m_window_pos = new Rect(m_parameters.displayX, m_parameters.displayY, 10, 10);
+        RenderingManager.AddToPostDrawQueue(3, new Callback(drawGUI));
+    }
+
+    public void onGamePause()
+    {
+        RenderingManager.RemoveFromPostDrawQueue(3, new Callback(drawGUI)); //close the GUI
+    }
+
+    public void onGameResume()
     {
         m_window_pos = new Rect(m_parameters.displayX, m_parameters.displayY, 10, 10);
         RenderingManager.AddToPostDrawQueue(3, new Callback(drawGUI));
