@@ -246,11 +246,11 @@ public class FuelTransferCore
             }
             if (fuelType == RegularFuel)
             {
-                if (p.GetType() == typeof(FuelTank)) { return true; }
+                if (p is FuelTank) { return true; }
             }
             else if (fuelType == RCSFuel)
             {
-                if (p.GetType() == typeof(RCSFuelTank)) { return true; }
+                if (p is RCSFuelTank) { return true; }
             }
         }
         return false;
@@ -265,10 +265,10 @@ public class FuelTransferCore
             return ifs.Fuel;
         }
         if (fuelType == RegularFuel) {
-            if (p.GetType () == typeof(FuelTank))
+            if (p is FuelTank)
                 return ((FuelTank)p).fuel;
         } else if (fuelType == RCSFuel) {
-            if (p.GetType () == typeof(RCSFuelTank))
+            if (p is RCSFuelTank)
                 return ((RCSFuelTank)p).fuel;
         }
         return -1;
@@ -283,11 +283,11 @@ public class FuelTransferCore
             ((IFuelSource)dest).Fuel += amount;
         }
         if (fuelType == RegularFuel) {
-            if (dest.GetType() == typeof(FuelTank)) {
+            if (dest is FuelTank) {
                 ((FuelTank)dest).fuel += amount;
             }
         } else if (fuelType == RCSFuel) {
-            if (dest.GetType() == typeof(RCSFuelTank)) {
+            if (dest is RCSFuelTank) {
                 ((RCSFuelTank)dest).fuel += amount;
             }
         }
@@ -319,7 +319,7 @@ public class FuelTransferCore
                 deactivated = true;
             }
         } else {
-            if (FuelType == RegularFuel && source.GetType() == typeof(FuelTank)) {
+            if (FuelType == RegularFuel && source is FuelTank) {
                 FuelTank ft = (FuelTank)source;
                 ft.fuel -= amount;
                 addFuel(dest, amount, FuelType);
@@ -327,7 +327,7 @@ public class FuelTransferCore
                     ft.deactivate();
                     deactivated = true;
                 }
-            } else if (FuelType == RCSFuel && source.GetType() == typeof(RCSFuelTank)) {
+            } else if (FuelType == RCSFuel && source is RCSFuelTank) {
                 RCSFuelTank ft = (RCSFuelTank)source;
                 ft.fuel -= amount;
                 addFuel(dest, amount, FuelType);
